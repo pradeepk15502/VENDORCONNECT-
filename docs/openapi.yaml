@@ -1,0 +1,917 @@
+openapi: 3.0.3
+info:
+  title: VendorConnect API
+  version: 1.0.0
+  description: 'Local product discovery: find what you need at nearby shops.'
+paths:
+  /api/v1/admin/whoami:
+    get:
+      operationId: admin_whoami_retrieve
+      description: Used by the admin web app to confirm an admin-grade session (password
+        + OTP).
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWhoAmI'
+          description: ''
+  /api/v1/auth/admin/password:
+    post:
+      operationId: auth_admin_password_create
+      description: 'Admin step 1: password. On success an OTP is sent (step 2 = otp/verify
+        with purpose=admin).'
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminPasswordRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpSent'
+          description: ''
+  /api/v1/auth/logout:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/me:
+    get:
+      operationId: auth_me_retrieve
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+    patch:
+      operationId: auth_me_partial_update
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMeRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/v1/auth/otp/request:
+    post:
+      operationId: auth_otp_request_create
+      description: Send a login code by SMS. Same response whether or not the number
+        is registered.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OtpRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OtpRequestRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpSent'
+          description: ''
+  /api/v1/auth/otp/verify:
+    post:
+      operationId: auth_otp_verify_create
+      description: Verify code → create account if new → return access token (+ refresh
+        cookie).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+          description: ''
+  /api/v1/auth/token/refresh:
+    post:
+      operationId: auth_token_refresh_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Access'
+          description: ''
+  /api/v1/categories:
+    get:
+      operationId: categories_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      tags:
+      - categories
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+          description: ''
+  /api/v1/vendors:
+    post:
+      operationId: vendors_create
+      description: Create my shop (vendor onboarding). Issues the unique Vendor ID.
+      tags:
+      - vendors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorOwner'
+          description: ''
+  /api/v1/vendors/{handle}:
+    get:
+      operationId: vendors_retrieve
+      description: GET /vendors/@SHARMA001 — case-insensitive, '@' optional. Public.
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+          pattern: ^@?[A-Za-z0-9]{3,16}$
+        required: true
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorPublic'
+          description: ''
+  /api/v1/vendors/me:
+    get:
+      operationId: vendors_me_retrieve
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorOwner'
+          description: ''
+    patch:
+      operationId: vendors_me_partial_update
+      tags:
+      - vendors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedVendorUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedVendorUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVendorUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorOwner'
+          description: ''
+  /api/v1/vendors/me/delivery:
+    patch:
+      operationId: vendors_me_delivery_partial_update
+      tags:
+      - vendors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeliveryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeliveryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeliveryRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Delivery'
+          description: ''
+  /api/v1/vendors/me/status:
+    post:
+      operationId: vendors_me_status_create
+      description: One-tap open/close. Customers see the change on their next request.
+      tags:
+      - vendors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopStatusRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ShopStatusRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShopStatusRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopStatus'
+          description: ''
+components:
+  schemas:
+    Access:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+          description: only when sent in the body (native clients)
+      required:
+      - access
+    AdminPasswordRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+      - password
+      - phone
+    AdminWhoAmI:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+      - id
+      - name
+      - permissions
+      - roles
+    Category:
+      type: object
+      properties:
+        slug:
+          type: string
+          maxLength: 60
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 80
+        names_i18n:
+          description: '{"hi": "सब्ज़ियाँ"}'
+        icon:
+          type: string
+          maxLength: 40
+        parent:
+          type: string
+          readOnly: true
+        sort_order:
+          type: integer
+          maximum: 32767
+          minimum: 0
+      required:
+      - name
+      - parent
+      - slug
+    Delivery:
+      type: object
+      properties:
+        delivery_enabled:
+          type: boolean
+        pickup_enabled:
+          type: boolean
+        radius_km:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        min_order_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        delivery_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        free_delivery_above:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+    LanguageEnum:
+      enum:
+      - en
+      - hi
+      type: string
+      description: |-
+        * `en` - en
+        * `hi` - hi
+    LocationInRequest:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+          maximum: 37.5
+          minimum: 6.0
+          description: India bounds
+        lng:
+          type: number
+          format: double
+          maximum: 97.5
+          minimum: 68.0
+        address_line:
+          type: string
+          minLength: 1
+          maxLength: 250
+        landmark:
+          type: string
+          maxLength: 120
+        locality:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        state:
+          type: string
+          maxLength: 80
+        pincode:
+          type: string
+          pattern: ^\d{6}$
+      required:
+      - address_line
+      - city
+      - lat
+      - lng
+    LocationOut:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        address_line:
+          type: string
+        landmark:
+          type: string
+        locality:
+          type: string
+        city:
+          type: string
+        pincode:
+          type: string
+      required:
+      - address_line
+      - city
+      - landmark
+      - lat
+      - lng
+      - locality
+      - pincode
+    LoginResult:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+          description: only with refresh_in_body=true
+        is_new_user:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/Me'
+      required:
+      - access
+      - is_new_user
+      - user
+    Me:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        language:
+          type: string
+          maxLength: 8
+        roles:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        vendor:
+          allOf:
+          - $ref: '#/components/schemas/VendorRef'
+          nullable: true
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - date_joined
+      - id
+      - phone
+      - roles
+      - vendor
+    OtpRequestRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+      required:
+      - phone
+    OtpSent:
+      type: object
+      properties:
+        sent:
+          type: boolean
+        expires_in:
+          type: integer
+        resend_after:
+          type: integer
+        dev_otp:
+          type: string
+          description: development only
+      required:
+      - expires_in
+      - resend_after
+      - sent
+    OtpVerifyRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        code:
+          type: string
+          minLength: 1
+          pattern: ^\d{4,8}$
+        purpose:
+          allOf:
+          - $ref: '#/components/schemas/PurposeEnum'
+          default: login
+        name:
+          type: string
+          maxLength: 120
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        refresh_in_body:
+          type: boolean
+          default: false
+          description: native clients only
+      required:
+      - code
+      - phone
+    PatchedDeliveryRequest:
+      type: object
+      properties:
+        delivery_enabled:
+          type: boolean
+        pickup_enabled:
+          type: boolean
+        radius_km:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        min_order_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        delivery_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        free_delivery_above:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+    PatchedMeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        language:
+          type: string
+          minLength: 1
+          maxLength: 8
+    PatchedVendorUpdateRequest:
+      type: object
+      properties:
+        shop_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        public_phone:
+          type: string
+          description: Shown to customers for calls
+          maxLength: 16
+        bio:
+          type: string
+          maxLength: 500
+    PurposeEnum:
+      enum:
+      - login
+      - admin
+      type: string
+      description: |-
+        * `login` - login
+        * `admin` - admin
+    RefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+    ShopStatus:
+      type: object
+      properties:
+        is_open:
+          type: boolean
+      required:
+      - is_open
+    ShopStatusRequest:
+      type: object
+      properties:
+        is_open:
+          type: boolean
+      required:
+      - is_open
+    StatusEnum:
+      enum:
+      - active
+      - suspended
+      - closed_permanently
+      type: string
+      description: |-
+        * `active` - Active
+        * `suspended` - Suspended
+        * `closed_permanently` - Closed
+    VendorCreateRequest:
+      type: object
+      properties:
+        shop_name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        category_slugs:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^[-a-zA-Z0-9_]+$
+          maxItems: 5
+          minItems: 1
+        location:
+          $ref: '#/components/schemas/LocationInRequest'
+        public_phone:
+          type: string
+          maxLength: 16
+        bio:
+          type: string
+          maxLength: 500
+      required:
+      - category_slugs
+      - location
+      - shop_name
+    VendorOwner:
+      type: object
+      description: What any customer sees. No owner info, no internal ids beyond the
+        stable UUID.
+      properties:
+        handle:
+          type: string
+          readOnly: true
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+          maxLength: 120
+        verified:
+          type: boolean
+          readOnly: true
+        is_open:
+          type: boolean
+          description: Manual shop status; source of truth for customers
+        status_changed_at:
+          type: string
+          format: date-time
+          nullable: true
+        public_phone:
+          type: string
+          description: Shown to customers for calls
+          maxLength: 16
+        categories:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        rating_avg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+        rating_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        follower_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        location:
+          allOf:
+          - $ref: '#/components/schemas/LocationOut'
+          nullable: true
+          readOnly: true
+        delivery:
+          allOf:
+          - $ref: '#/components/schemas/Delivery'
+          readOnly: true
+        bio:
+          type: string
+          default: ''
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        verification_status:
+          $ref: '#/components/schemas/VerificationStatusEnum'
+        onboarding_step:
+          type: string
+          maxLength: 20
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - categories
+      - created_at
+      - delivery
+      - handle
+      - location
+      - shop_name
+      - vendor_id
+      - verified
+    VendorPublic:
+      type: object
+      description: What any customer sees. No owner info, no internal ids beyond the
+        stable UUID.
+      properties:
+        handle:
+          type: string
+          readOnly: true
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+          maxLength: 120
+        verified:
+          type: boolean
+          readOnly: true
+        is_open:
+          type: boolean
+          description: Manual shop status; source of truth for customers
+        status_changed_at:
+          type: string
+          format: date-time
+          nullable: true
+        public_phone:
+          type: string
+          description: Shown to customers for calls
+          maxLength: 16
+        categories:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        rating_avg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+        rating_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        follower_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        location:
+          allOf:
+          - $ref: '#/components/schemas/LocationOut'
+          nullable: true
+          readOnly: true
+        delivery:
+          allOf:
+          - $ref: '#/components/schemas/Delivery'
+          readOnly: true
+        bio:
+          type: string
+          default: ''
+      required:
+      - categories
+      - delivery
+      - handle
+      - location
+      - shop_name
+      - vendor_id
+      - verified
+    VendorRef:
+      type: object
+      properties:
+        handle:
+          type: string
+        shop_name:
+          type: string
+      required:
+      - handle
+      - shop_name
+    VerificationStatusEnum:
+      enum:
+      - unverified
+      - pending
+      - verified
+      - rejected
+      type: string
+      description: |-
+        * `unverified` - Unverified
+        * `pending` - Pending review
+        * `verified` - Verified
+        * `rejected` - Rejected
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

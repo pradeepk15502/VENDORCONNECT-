@@ -1,0 +1,10 @@
+{
+  "name": "VendorConnect",
+  "short_name": "VendorConnect",
+  "description": "Find products at nearby shops.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f5",
+  "theme_color": "#15703f",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

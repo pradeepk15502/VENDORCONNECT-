@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+staticfiles/
+tests/e2e/report/
+tests/e2e/.logs/
+test-results/
+.coverage

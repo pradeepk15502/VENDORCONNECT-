@@ -1,0 +1,12 @@
+line-length = 120
+target-version = "py311"
+extend-exclude = ["*/migrations/*"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "DJ"]
+ignore = ["S101", "S105", "S106", "E501", "DJ001", "DJ008"]
+
+[lint.per-file-ignores]
+"**/tests/*" = ["S", "B"]
+"conftest.py" = ["S"]
+"config/settings/*" = ["F403", "F405"]

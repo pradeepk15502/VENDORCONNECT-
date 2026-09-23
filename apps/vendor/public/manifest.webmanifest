@@ -1,0 +1,10 @@
+{
+  "name": "VendorConnect for Shops",
+  "short_name": "VC Shop",
+  "description": "Manage your shop.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f5",
+  "theme_color": "#15703f",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

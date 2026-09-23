@@ -1,0 +1,109 @@
+/* VendorConnect design tokens.
+ * Principles: large tap targets (≥48px), 17px base text, high contrast (WCAG AA on all text),
+ * status always shown with icon + word + colour (never colour alone). */
+
+:root {
+  /* brand */
+  --vc-green-700: #0f5c36;
+  --vc-green-600: #15703f; /* primary: 6.1:1 on white */
+  --vc-green-100: #dff3e7;
+  --vc-green-50: #f1faf4;
+  --vc-orange-700: #9a4a00; /* orange text: 6.0:1 on white */
+  --vc-orange-500: #f07c00; /* accents / large icons only */
+  --vc-orange-100: #ffecd6;
+
+  /* neutrals */
+  --vc-ink: #14201a;
+  --vc-ink-2: #3c4a42; /* secondary text: 9:1 */
+  --vc-ink-3: #5c6a62; /* tertiary text: 5.7:1 */
+  --vc-line: #d9e0dc;
+  --vc-surface: #ffffff;
+  --vc-bg: #f6f7f5;
+
+  /* status */
+  --vc-open: #15703f;
+  --vc-open-bg: #dff3e7;
+  --vc-closed: #b3261e;
+  --vc-closed-bg: #fde7e5;
+  --vc-low: #8a5300;
+  --vc-low-bg: #fff1d6;
+  --vc-stale: #5c6a62;
+  --vc-stale-bg: #eceeed;
+  --vc-info: #1d4ed8;
+  --vc-info-bg: #e3ebff;
+
+  /* type */
+  --vc-font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Nirmala UI", sans-serif;
+  --vc-text-xs: 0.8125rem;
+  --vc-text-sm: 0.9375rem;
+  --vc-text-md: 1.0625rem; /* 17px base */
+  --vc-text-lg: 1.25rem;
+  --vc-text-xl: 1.5rem;
+  --vc-text-2xl: 1.875rem;
+
+  /* space & shape */
+  --vc-s1: 4px;
+  --vc-s2: 8px;
+  --vc-s3: 12px;
+  --vc-s4: 16px;
+  --vc-s5: 24px;
+  --vc-s6: 32px;
+  --vc-radius: 14px;
+  --vc-radius-sm: 10px;
+  --vc-radius-pill: 999px;
+  --vc-tap: 52px;
+  --vc-shadow: 0 1px 2px rgb(20 32 26 / 8%), 0 4px 16px rgb(20 32 26 / 6%);
+  --vc-nav-h: 68px;
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--vc-bg);
+  color: var(--vc-ink);
+  font-family: var(--vc-font);
+  font-size: var(--vc-text-md);
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--vc-orange-500);
+  outline-offset: 2px;
+}
+
+.vc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

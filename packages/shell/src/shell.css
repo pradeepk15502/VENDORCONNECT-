@@ -1,0 +1,13 @@
+.vc-center-screen { padding-top: var(--vc-s6); }
+.vc-brand { display: flex; align-items: center; gap: var(--vc-s3); }
+.vc-brand__mark { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; background: var(--vc-green-600); color: #fff; }
+.vc-brand__name { font-size: var(--vc-text-xl); font-weight: 800; color: var(--vc-green-700); }
+.vc-langopt {
+  display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: var(--vc-s3);
+  min-height: 76px; padding: var(--vc-s3) var(--vc-s4); text-align: left;
+  border: 2px solid var(--vc-line); border-radius: var(--vc-radius); background: var(--vc-surface); cursor: pointer;
+}
+.vc-langopt svg { grid-row: 1 / span 2; grid-column: 2; color: var(--vc-green-600); }
+.vc-langopt.is-selected { border-color: var(--vc-green-600); background: var(--vc-green-50); }
+.vc-langopt__native { font-size: var(--vc-text-xl); font-weight: 750; }
+.vc-langopt__label { color: var(--vc-ink-3); font-size: var(--vc-text-sm); }

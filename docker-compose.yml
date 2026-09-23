@@ -1,0 +1,41 @@
+# Local development stack: docker compose up --build
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment: { POSTGRES_USER: vc, POSTGRES_PASSWORD: vc_dev_pw, POSTGRES_DB: vendorconnect }
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U vc"], interval: 5s, retries: 10 }
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment: { MINIO_ROOT_USER: vcminio, MINIO_ROOT_PASSWORD: vcminio-dev-pw }
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+  api:
+    build: { context: services/api, target: dev }
+    env_file: services/api/.env.example
+    environment:
+      DATABASE_URL: postgis://vc:vc_dev_pw@db:5432/vendorconnect
+      REDIS_URL: redis://redis:6379/0
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api
+    command: sh -c "python manage.py migrate && python manage.py seed_taxonomy && python manage.py runserver 0.0.0.0:8000"
+    ports: ["8000:8000"]
+    volumes: ["./services/api:/app"]
+    depends_on: { db: { condition: service_healthy }, redis: { condition: service_started } }
+  customer:
+    build: { context: ., dockerfile: infrastructure/docker/web.Dockerfile, args: { APP: customer } }
+    ports: ["8081:80"]
+    depends_on: [api]
+  vendor:
+    build: { context: ., dockerfile: infrastructure/docker/web.Dockerfile, args: { APP: vendor } }
+    ports: ["8082:80"]
+    depends_on: [api]
+  admin:
+    build: { context: ., dockerfile: infrastructure/docker/web.Dockerfile, args: { APP: admin } }
+    ports: ["8083:80"]
+    depends_on: [api]
+volumes: { pgdata: {}, miniodata: {} }

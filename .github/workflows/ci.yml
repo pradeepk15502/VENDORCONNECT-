@@ -1,0 +1,107 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-24.04
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env: { POSTGRES_USER: vc, POSTGRES_PASSWORD: vc_dev_pw, POSTGRES_DB: vendorconnect }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U vc" --health-interval 5s --health-retries 10
+      redis: { image: "redis:7-alpine", ports: ["6379:6379"] }
+    defaults: { run: { working-directory: services/api } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y gdal-bin libgdal-dev
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check . && ruff format --check .
+      - name: Migrations are complete
+        run: python manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: pytest --create-db --cov=vc --cov-report=term-missing
+      - name: Security (bandit + pip-audit)
+        run: bandit -q -r vc config -x "*/tests/*,*/migrations/*" && pip-audit -r requirements.txt
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck:tests
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  e2e:
+    needs: [api, web]
+    runs-on: ubuntu-24.04
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env: { POSTGRES_USER: vc, POSTGRES_PASSWORD: vc_dev_pw, POSTGRES_DB: vendorconnect }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U vc" --health-interval 5s --health-retries 10
+      redis: { image: "redis:7-alpine", ports: ["6379:6379"] }
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y gdal-bin libgdal-dev
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: pip install -r services/api/requirements.txt
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npx playwright install --with-deps chromium && npm run build
+      - run: PYTHON=python tests/e2e/run-stack.sh start
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: e2e-report, path: tests/e2e/report }
+
+  docker:
+    needs: [e2e]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions: { contents: read, packages: write }
+    strategy:
+      matrix:
+        include:
+          - { name: api, context: services/api, file: services/api/Dockerfile, target: prod, args: "" }
+          - { name: customer, context: ., file: infrastructure/docker/web.Dockerfile, target: "", args: "APP=customer" }
+          - { name: vendor, context: ., file: infrastructure/docker/web.Dockerfile, target: "", args: "APP=vendor" }
+          - { name: admin, context: ., file: infrastructure/docker/web.Dockerfile, target: "", args: "APP=admin" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
+          build-args: ${{ matrix.args }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.name }}:${{ github.sha }}
+
+  deploy-staging:
+    needs: [docker]
+    runs-on: ubuntu-24.04
+    environment: staging
+    steps:
+      - run: echo "Deploy ghcr.io/${{ github.repository }}/*:${{ github.sha }} to staging — see docs/DEPLOYMENT.md (wired up in Phase 13)"
+
+  deploy-production:
+    needs: [deploy-staging]
+    runs-on: ubuntu-24.04
+    environment: production   # configure required reviewers on this environment = manual approval gate
+    steps:
+      - run: echo "Promote ${{ github.sha }} to production — see docs/DEPLOYMENT.md (wired up in Phase 13)"
