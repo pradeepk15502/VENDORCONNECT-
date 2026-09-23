@@ -1,0 +1,67 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: start (Docker: db + redis + api)",
+      "type": "shell",
+      "command": "docker compose up db redis api",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activelyMatches": true, "beginsPattern": ".", "endsPattern": "(Starting development server|Quit the server)" } },
+      "presentation": { "panel": "dedicated", "group": "vc" }
+    },
+    {
+      "label": "Web: customer app (5173)",
+      "type": "shell",
+      "command": "npm run dev:customer",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activelyMatches": true, "beginsPattern": ".", "endsPattern": "Local:" } },
+      "presentation": { "panel": "dedicated", "group": "vc" }
+    },
+    {
+      "label": "Web: vendor app (5174)",
+      "type": "shell",
+      "command": "npm run dev:vendor",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activelyMatches": true, "beginsPattern": ".", "endsPattern": "Local:" } },
+      "presentation": { "panel": "dedicated", "group": "vc" }
+    },
+    {
+      "label": "Web: admin app (5175)",
+      "type": "shell",
+      "command": "npm run dev:admin",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activelyMatches": true, "beginsPattern": ".", "endsPattern": "Local:" } },
+      "presentation": { "panel": "dedicated", "group": "vc" }
+    },
+    {
+      "label": "VendorConnect: start everything",
+      "dependsOn": ["Backend: start (Docker: db + redis + api)", "Web: customer app (5173)", "Web: vendor app (5174)", "Web: admin app (5175)"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "Admin: create admin user",
+      "type": "shell",
+      "command": "docker compose exec api python manage.py createsuperuser",
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: backend",
+      "type": "shell",
+      "command": "docker compose exec api pytest",
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: frontend",
+      "type": "shell",
+      "command": "npm test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: stop",
+      "type": "shell",
+      "command": "docker compose stop",
+      "problemMatcher": []
+    }
+  ]
+}

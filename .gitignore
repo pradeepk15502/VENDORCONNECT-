@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+!.vscode
 __pycache__/
 *.pyc
 .pytest_cache/
