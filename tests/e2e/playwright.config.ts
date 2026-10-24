@@ -20,7 +20,8 @@ export default defineConfig({
   // vendor) and costs some CI wall-clock time, but avoids having to prove file-by-file which uses of
   // the shared vendor are truly read-only and therefore safe to parallelize.
   workers: 1,
-  reporter: [["list"], ["html", { outputFolder: "report", open: "never" }]],
+  // In CI also emit GitHub annotations so a failure's message is visible on the run page itself.
+  reporter: [["list"], ...(process.env.CI ? [["github"] as ["github"]] : []), ["html", { outputFolder: "report", open: "never" }]],
   use: {
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
