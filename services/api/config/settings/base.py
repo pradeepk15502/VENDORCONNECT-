@@ -139,6 +139,9 @@ MEDIA_MAX_PER_POST = env.int("MEDIA_MAX_PER_POST", default=6)
 MEDIA_STORAGE_BACKEND = env("MEDIA_STORAGE_BACKEND", default="local")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="ap-south-1")
+# Optional: point vc/assets/storage.py's S3MediaStorage at an S3-compatible endpoint other than real
+# AWS (Supabase Storage, Cloudflare R2, ...). Empty/unset keeps real AWS S3 behaviour unchanged.
+AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="")
 MEDIA_S3_SIGNED_URL_EXPIRY_SECONDS = env.int("MEDIA_S3_SIGNED_URL_EXPIRY_SECONDS", default=3600)
 
 # --- REST framework -------------------------------------------------------

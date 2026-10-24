@@ -17,6 +17,7 @@ import re
 from typing import Protocol
 
 import boto3
+from botocore.config import Config as BotoConfig
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -78,7 +79,20 @@ class S3MediaStorage:
 
     def __init__(self) -> None:
         self._bucket = settings.AWS_STORAGE_BUCKET_NAME
-        self._client = boto3.client("s3", region_name=settings.AWS_S3_REGION_NAME)
+        # AWS_S3_ENDPOINT_URL (optional): unset for real AWS S3 (boto3's default endpoint resolution,
+        # auth via its default credential chain — the ECS task role in AWS). Set it to point this same
+        # client at any S3-compatible object store instead — e.g. Supabase Storage's S3 endpoint
+        # (`https://<project-ref>.supabase.co/storage/v1/s3`) or Cloudflare R2 — in which case auth
+        # falls back to AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY env vars (still boto3's own default
+        # chain, nothing read from Django settings directly). Path-style addressing is forced because
+        # third-party S3-compatible endpoints generally don't support virtual-hosted-style buckets.
+        endpoint_url = settings.AWS_S3_ENDPOINT_URL or None
+        self._client = boto3.client(
+            "s3",
+            region_name=settings.AWS_S3_REGION_NAME,
+            endpoint_url=endpoint_url,
+            config=BotoConfig(s3={"addressing_style": "path"}) if endpoint_url else None,
+        )
 
     @staticmethod
     def _safe_key(key: str) -> str:
