@@ -36,7 +36,7 @@ test("search: category tile shows nearby listings ranked open/in-stock first", a
 test("search: Hindi-transliterated query finds the product and ranks the open shop first", async ({ page }) => {
   await toHome(page);
   await page.getByRole("link", { name: "Search" }).click();
-  await page.getByLabel("Search", { exact: true }).fill("tamatar");
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("tamatar");
   await expect(page.getByText("2 results near you")).toBeVisible();
 
   const cards = page.locator(".c-result");
@@ -50,7 +50,7 @@ test("search: Hindi-transliterated query finds the product and ranks the open sh
 test("search: typing a Vendor ID shows a shop-found card that opens the vendor profile", async ({ page }) => {
   await toHome(page);
   await page.getByRole("link", { name: "Search" }).click();
-  await page.getByLabel("Search", { exact: true }).fill("@SHARMA001");
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("@SHARMA001");
   await expect(page.getByRole("heading", { name: "Shop found" })).toBeVisible();
   await page.getByRole("button", { name: /Sharma Vegetable Store/ }).click();
   await expect(page).toHaveURL(/\/v\/SHARMA001/i);
@@ -60,14 +60,14 @@ test("search: typing a Vendor ID shows a shop-found card that opens the vendor p
 test("search: unrelated text shows the no-results empty state", async ({ page }) => {
   await toHome(page);
   await page.getByRole("link", { name: "Search" }).click();
-  await page.getByLabel("Search", { exact: true }).fill("zzznonsensequery");
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("zzznonsensequery");
   await expect(page.getByText("No results found")).toBeVisible();
 });
 
 test("search: Open now filter (Phase 6) narrows real results, not just the UI", async ({ page }) => {
   await toHome(page);
   await page.getByRole("link", { name: "Search" }).click();
-  await page.getByLabel("Search", { exact: true }).fill("tamatar");
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("tamatar");
   await expect(page.getByText("2 results near you")).toBeVisible();
 
   await page.getByRole("button", { name: "Filters" }).click();
@@ -92,7 +92,7 @@ test("search: Open now filter (Phase 6) narrows real results, not just the UI", 
 test("search: Map view (Phase 6) plots real shop markers and opens a profile from one", async ({ page }) => {
   await toHome(page);
   await page.getByRole("link", { name: "Search" }).click();
-  await page.getByLabel("Search", { exact: true }).fill("tamatar");
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("tamatar");
   await expect(page.getByText("2 results near you")).toBeVisible();
 
   await page.getByRole("button", { name: "Map" }).click();
