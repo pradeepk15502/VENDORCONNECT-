@@ -71,6 +71,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         indexes = [models.Index(fields=["date_joined"])]
+        permissions = [("manage_users", "Can suspend/restore user accounts (admin)")]
 
     def __str__(self):
         return self.name or self.masked_phone
@@ -82,7 +83,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     def role_codes(self) -> set[str]:
         cache = getattr(self, "_role_cache", None)
         if cache is None:
-            cache = set(self.user_roles.values_list("role_id", flat=True))
+            # Phase 12 hardening: `.values_list()` always issues its own query, even when
+            # `user_roles` was `prefetch_related`'d — it clones the manager's queryset, which drops
+            # the prefetch cache. When a prefetch is present, read the already-fetched objects
+            # instead so a batch caller (e.g. the admin user list) doesn't pay a query per user.
+            if "user_roles" in getattr(self, "_prefetched_objects_cache", {}):
+                cache = {ur.role_id for ur in self.user_roles.all()}
+            else:
+                cache = set(self.user_roles.values_list("role_id", flat=True))
             self._role_cache = cache
         return cache
 

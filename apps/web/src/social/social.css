@@ -1,0 +1,83 @@
+/* Phase 9 — Reviews + Posts + Following (ARCHITECTURE D30). */
+
+/* ---------- Rating stars ---------- */
+.soc-stars { position: relative; display: inline-block; color: var(--vc-line); }
+.soc-stars__track { display: flex; }
+.soc-stars__fill { position: absolute; inset: 0; overflow: hidden; display: flex; color: var(--vc-orange-500); }
+.soc-stars svg { fill: currentColor; flex: none; }
+
+.soc-ratepick { display: flex; gap: 6px; }
+.soc-ratepick__item { position: relative; }
+.soc-ratepick__input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.soc-ratepick__item label { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; color: var(--vc-line); cursor: pointer; }
+.soc-ratepick__item label svg { fill: none; }
+.soc-ratepick__item label.is-filled { color: var(--vc-orange-500); }
+.soc-ratepick__item label.is-filled svg { fill: currentColor; }
+.soc-ratepick__input:focus-visible + label { outline: 3px solid var(--vc-orange-500); outline-offset: 2px; }
+
+/* ---------- Follow button ---------- */
+.soc-followwrap { display: flex; flex-direction: column; gap: var(--vc-s2); }
+
+/* ---------- Vendor header stats (rating · reviews · followers) ---------- */
+.soc-shopstats { display: flex; flex-wrap: wrap; gap: var(--vc-s4); align-items: center; }
+.soc-shopstats__item { display: flex; align-items: center; gap: 6px; font-weight: 650; }
+.soc-shopstats__num { font-weight: 800; }
+
+/* ---------- Post card ---------- */
+.soc-postgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--vc-s3); }
+.soc-postcard { display: flex; flex-direction: column; background: var(--vc-surface); border-radius: var(--vc-radius); box-shadow: var(--vc-shadow); overflow: hidden; }
+.soc-postcard__media { position: relative; display: block; width: 100%; aspect-ratio: 1; border: 0; padding: 0; cursor: pointer; background: var(--vc-green-50); }
+.soc-postcard__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.soc-postcard__placeholder { display: grid; place-items: center; width: 100%; height: 100%; color: var(--vc-green-600); }
+.soc-postcard__kind { position: absolute; left: 6px; top: 6px; }
+.soc-postcard__body { display: flex; flex-direction: column; gap: 6px; padding: var(--vc-s3); }
+.soc-postcard__vendor { display: flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 0; font-weight: 650; cursor: pointer; color: var(--vc-ink); text-align: left; }
+.soc-postcard__caption { margin: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.soc-postcard__product { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; border: 1px solid var(--vc-line); border-radius: var(--vc-radius-sm); padding: 6px 8px; background: var(--vc-bg); cursor: pointer; text-align: left; }
+.soc-postcard__product-name { font-weight: 650; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.soc-postcard__product-price { font-weight: 700; color: var(--vc-green-700); white-space: nowrap; }
+.soc-postcard__time { font-size: var(--vc-text-xs); }
+
+/* Wide single-column feed variant (Home "From Shops You Follow") */
+.soc-feedlist { display: flex; flex-direction: column; gap: var(--vc-s3); }
+.soc-feedlist .soc-postcard { flex-direction: row; }
+.soc-feedlist .soc-postcard__media { width: 96px; aspect-ratio: 1; flex: none; }
+.soc-feedlist .soc-postcard__body { flex: 1; min-width: 0; }
+
+/* ---------- Review card ---------- */
+.soc-review { display: flex; flex-direction: column; gap: 8px; padding: var(--vc-s3) 0; border-bottom: 1px solid var(--vc-line); }
+.soc-review:last-child { border-bottom: 0; }
+.soc-review__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--vc-s2); }
+.soc-review__author { margin: 0 0 4px; font-weight: 700; }
+.soc-review__time { flex: none; font-size: var(--vc-text-xs); }
+.soc-review__text { margin: 0; }
+.soc-review__listing { margin: 0; }
+.soc-review__reply { background: var(--vc-green-50); border-radius: var(--vc-radius-sm); padding: var(--vc-s3); }
+.soc-review__reply-label { margin: 0 0 4px; font-weight: 700; color: var(--vc-green-700); font-size: var(--vc-text-sm); }
+
+/* ---------- Review form / report dialog ---------- */
+.soc-reviewform__textarea, .soc-composer__textarea {
+  width: 100%; min-height: 90px; padding: var(--vc-s3); border: 2px solid var(--vc-line); border-radius: var(--vc-radius);
+  font-size: var(--vc-text-md); font-family: inherit; resize: vertical;
+}
+.soc-report__reasons { display: flex; flex-direction: column; gap: 4px; border: 0; padding: 0; margin: 0; }
+.soc-report__reason { display: flex; align-items: center; gap: var(--vc-s2); min-height: 44px; cursor: pointer; }
+
+/* ---------- Create Post composer ---------- */
+.soc-composer__steps { display: flex; gap: 6px; }
+.soc-composer__step { flex: 1; height: 4px; border-radius: 2px; background: var(--vc-line); }
+.soc-composer__step.is-done { background: var(--vc-green-600); }
+.soc-composer__kindgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--vc-s3); }
+.soc-composer__mediagrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--vc-s2); }
+.soc-composer__thumb { position: relative; aspect-ratio: 1; border-radius: var(--vc-radius-sm); overflow: hidden; background: var(--vc-green-50); }
+.soc-composer__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.soc-composer__thumb-remove { position: absolute; top: 4px; right: 4px; }
+.soc-composer__addmedia { display: grid; place-items: center; aspect-ratio: 1; border: 2px dashed var(--vc-line); border-radius: var(--vc-radius-sm); background: transparent; cursor: pointer; color: var(--vc-ink-2); }
+.soc-composer__preview { display: flex; flex-direction: column; gap: var(--vc-s2); }
+
+/* ---------- Vendor posts management ---------- */
+.soc-vendorpost { display: flex; gap: var(--vc-s3); align-items: flex-start; }
+.soc-vendorpost__thumb { width: 72px; height: 72px; border-radius: var(--vc-radius-sm); overflow: hidden; flex: none; background: var(--vc-green-50); }
+.soc-vendorpost__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.soc-vendorpost__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.soc-vendorpost__actions { display: flex; gap: var(--vc-s2); }

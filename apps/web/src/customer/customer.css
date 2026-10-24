@@ -1,0 +1,163 @@
+.c-header { display: flex; align-items: center; gap: var(--vc-s2); padding-top: var(--vc-s4); }
+.c-loc { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 var(--vc-s3); border-radius: var(--vc-radius-pill); border: 0; background: var(--vc-surface); box-shadow: var(--vc-shadow); font-weight: 650; cursor: pointer; }
+.c-search {
+  display: flex; align-items: center; gap: var(--vc-s2); width: 100%;
+  min-height: 60px; padding: 0 var(--vc-s2) 0 var(--vc-s4);
+  border: 2px solid var(--vc-green-600); border-radius: var(--vc-radius); background: var(--vc-surface);
+  color: var(--vc-ink-3); font-size: var(--vc-text-md); text-align: left; cursor: pointer;
+}
+.c-search__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-search__cam { flex: none; }
+.c-search__cam { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: var(--vc-orange-100); color: var(--vc-orange-700); }
+.c-section-title { display: flex; justify-content: space-between; align-items: center; }
+.c-cat-row { display: flex; gap: var(--vc-s3); overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.c-cat-row::-webkit-scrollbar { display: none; }
+.c-cat-row .vc-tile { flex: 0 0 92px; }
+.c-intro-art {
+  position: relative; display: grid; place-items: center; height: 220px; border-radius: 24px; overflow: hidden;
+  background: linear-gradient(160deg, var(--vc-green-50) 0%, var(--vc-green-100) 100%); color: var(--vc-green-600);
+}
+.c-intro-art__ring { position: absolute; width: 260px; height: 260px; border-radius: 50%; border: 2px dashed var(--vc-green-600); opacity: 0.3; }
+.c-intro-art__mark { position: relative; display: grid; place-items: center; width: 108px; height: 108px; border-radius: 50%; background: var(--vc-surface); box-shadow: var(--vc-shadow); }
+.c-intro-art__badge { position: absolute; top: 22px; right: 32px; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--vc-orange-100); color: var(--vc-orange-700); }
+.c-dots { display: flex; gap: 8px; justify-content: center; }
+.c-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--vc-line); }
+.c-dots span.is-on { width: 28px; border-radius: 5px; background: var(--vc-green-600); }
+.c-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--vc-s2); }
+.c-listbtn { display: flex; align-items: center; gap: var(--vc-s3); width: 100%; min-height: 60px; padding: 0 var(--vc-s4); border: 0; border-radius: var(--vc-radius); background: var(--vc-surface); box-shadow: var(--vc-shadow); font-weight: 600; text-align: left; cursor: pointer; }
+.c-listbtn > span { flex: 1; }
+
+/* Search results + shop-match card (Phase 2) */
+.c-result {
+  display: flex; flex-direction: column; gap: 6px; width: 100%; padding: var(--vc-s4);
+  border: 0; border-radius: var(--vc-radius); background: var(--vc-surface); box-shadow: var(--vc-shadow);
+  text-align: left; cursor: pointer;
+}
+.c-result__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--vc-s3); }
+.c-result__name { font-weight: 700; font-size: var(--vc-text-md); }
+.c-result__price { flex: none; font-weight: 700; white-space: nowrap; }
+.c-result__mrp { display: inline-block; margin-inline-start: 6px; color: var(--vc-ink-3); text-decoration: line-through; font-weight: 400; }
+.c-result__vendor { display: flex; align-items: center; gap: 5px; color: var(--vc-ink-2); font-size: var(--vc-text-sm); }
+.c-result__badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Nearby-vendor cards (Phase 3): Home "Shops near you" + Vendors tab */
+.c-vcard {
+  display: flex; flex-direction: column; gap: 6px; width: 100%; padding: var(--vc-s4);
+  border: 0; border-radius: var(--vc-radius); background: var(--vc-surface); box-shadow: var(--vc-shadow);
+  text-align: left; cursor: pointer;
+}
+.c-vcard__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--vc-s3); }
+.c-vcard__name { font-weight: 700; font-size: var(--vc-text-md); }
+.c-vcard__dist { flex: none; display: inline-flex; align-items: center; gap: 4px; color: var(--vc-ink-2); font-size: var(--vc-text-sm); white-space: nowrap; }
+.c-vcard__addr { color: var(--vc-ink-2); font-size: var(--vc-text-sm); }
+.c-vcard__badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Vendor profile tabs (Phase 3) */
+.c-tabs { display: flex; gap: var(--vc-s2); overflow-x: auto; border-bottom: 1px solid var(--vc-line); scrollbar-width: none; }
+.c-tabs::-webkit-scrollbar { display: none; }
+.c-tabs__btn {
+  flex: none; padding: var(--vc-s3) var(--vc-s2); border: 0; border-bottom: 2px solid transparent;
+  background: none; color: var(--vc-ink-2); font-weight: 600; font-size: var(--vc-text-sm); cursor: pointer;
+}
+.c-tabs__btn.is-active { color: var(--vc-green-700); border-bottom-color: var(--vc-green-600); }
+
+/* Discovery filters (Phase 6) — Search + Vendors filter sheet, and the row that hosts its trigger
+ * button alongside the List/Map toggle. */
+.c-filter-row { display: flex; align-items: center; gap: var(--vc-s3); }
+.c-filter-btn { flex: none; }
+.c-filter-group { display: flex; flex-direction: column; gap: var(--vc-s2); }
+.c-filter-group__title { margin: 0; font-size: var(--vc-text-sm); font-weight: 700; color: var(--vc-ink-2); }
+.c-filter-group__chips { display: flex; flex-wrap: wrap; gap: var(--vc-s2); }
+/* minmax(0,1fr), not 1fr — a bare 1fr grid item won't shrink below its content's intrinsic width
+ * (see ARCHITECTURE.md "Fixed during Phase 4"); the same fix applies to any new 2-up grid. */
+.c-filter-group__price { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--vc-s3); }
+.c-filter-actions { display: flex; gap: var(--vc-s3); padding-top: var(--vc-s2); }
+.c-filter-actions > * { flex: 1; }
+
+/* List/Map toggle (Phase 6) */
+.c-view-toggle { display: inline-flex; flex: none; border: 1px solid var(--vc-line); border-radius: var(--vc-radius-pill); padding: 2px; gap: 2px; }
+.c-view-toggle__btn {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 var(--vc-s3);
+  border: 0; border-radius: var(--vc-radius-pill); background: none; color: var(--vc-ink-2); font-weight: 600;
+  font-size: var(--vc-text-sm); cursor: pointer;
+}
+.c-view-toggle__btn.is-active { background: var(--vc-green-600); color: #fff; }
+
+/* Map view (Phase 6, ARCHITECTURE D13) — Leaflet + OpenStreetMap tiles. Leaflet's own default
+ * divIcon styling (a white box with a border) is reset here since every marker uses a custom icon. */
+.c-map-wrap { position: relative; border-radius: var(--vc-radius); overflow: hidden; box-shadow: var(--vc-shadow); }
+.c-map { width: 100%; height: 62vh; min-height: 340px; background: var(--vc-green-50); }
+.leaflet-div-icon { background: transparent; border: none; }
+
+.c-map-legend {
+  position: absolute; z-index: 500; bottom: var(--vc-s3); left: var(--vc-s3);
+  display: flex; gap: var(--vc-s3); padding: 6px 12px; border-radius: var(--vc-radius-pill);
+  background: var(--vc-surface); box-shadow: var(--vc-shadow); font-size: var(--vc-text-sm); font-weight: 650;
+}
+.c-map-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.c-map-legend__dot { width: 10px; height: 10px; border-radius: 50%; }
+.c-map-legend__dot--open { background: var(--vc-green-600); }
+.c-map-legend__dot--closed { background: var(--vc-ink-3); }
+
+.c-map-pin__dot { display: block; width: 100%; height: 100%; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
+.c-map-pin--open .c-map-pin__dot { background: var(--vc-green-600); }
+.c-map-pin--closed .c-map-pin__dot { background: var(--vc-ink-3); }
+
+.c-map-you { position: relative; }
+.c-map-you__dot { position: absolute; inset: 6px; border-radius: 50%; background: #1a73e8; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
+.c-map-you__ring { position: absolute; inset: 0; border-radius: 50%; background: rgba(26, 115, 232, 0.28); animation: c-map-pulse 2s ease-out infinite; }
+@keyframes c-map-pulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.9); opacity: 0; } }
+
+.c-map-popup { display: flex; flex-direction: column; gap: 6px; min-width: 190px; }
+.c-map-popup strong { font-size: var(--vc-text-md); }
+.c-map-popup span { color: var(--vc-ink-2); font-size: var(--vc-text-sm); }
+.c-map-popup__actions { display: flex; gap: 8px; margin-top: 4px; }
+.c-map-popup__actions > * { flex: 1; text-align: center; text-decoration: none; }
+
+/* Cart (Phase 8) — vendor-grouped list; each group is its own card with its own subtotal/checkout. */
+.c-cart-group__head { display: flex; align-items: center; justify-content: space-between; gap: var(--vc-s2); }
+.c-cart-group__shop { display: inline-flex; align-items: center; gap: 6px; min-width: 0; border: 0; background: none; padding: 0; font-weight: 700; color: var(--vc-ink-1); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-cart-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--vc-s3); }
+.c-cart-row { display: flex; align-items: center; justify-content: space-between; gap: var(--vc-s3); padding-block: var(--vc-s2); border-top: 1px solid var(--vc-line); }
+.c-cart-row:first-child { border-top: 0; padding-top: 0; }
+.c-cart-row__main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.c-cart-row__name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-cart-row__unit { font-size: var(--vc-text-sm); }
+.c-cart-row__controls { display: flex; align-items: center; gap: var(--vc-s3); flex: none; }
+.c-cart-row__total { font-weight: 700; min-width: 64px; text-align: right; }
+.c-qty { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--vc-line); border-radius: var(--vc-radius-pill); }
+.c-qty__btn { width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; font-size: 1.1rem; font-weight: 700; line-height: 1; cursor: pointer; color: var(--vc-green-700); }
+.c-qty__btn:disabled { opacity: 0.4; cursor: default; }
+.c-qty__value { min-width: 22px; text-align: center; font-weight: 650; }
+.c-cart-group__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--vc-s3); padding-top: var(--vc-s2); border-top: 1px solid var(--vc-line); }
+.c-cart-group__subtotal { font-size: var(--vc-text-sm); }
+
+/* Checkout (Phase 8) */
+.c-checkout__option { display: flex; align-items: flex-start; gap: var(--vc-s3); width: 100%; padding: var(--vc-s4); border: 2px solid var(--vc-line); border-radius: var(--vc-radius); background: var(--vc-surface); text-align: left; cursor: pointer; }
+.c-checkout__option.is-selected { border-color: var(--vc-green-600); background: var(--vc-green-50); }
+.c-checkout__option:disabled { opacity: 0.5; cursor: default; }
+.c-checkout__option-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.c-checkout__option-title { font-weight: 700; }
+.c-checkout__option-hint { color: var(--vc-ink-3); font-size: var(--vc-text-sm); }
+.c-checkout__addr-card { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--vc-s3); padding: var(--vc-s4); border-radius: var(--vc-radius); background: var(--vc-surface); box-shadow: var(--vc-shadow); }
+.c-checkout__addr-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.c-checkout__line { display: flex; justify-content: space-between; gap: var(--vc-s3); }
+.c-checkout__line--total { font-weight: 800; font-size: var(--vc-text-lg); padding-top: var(--vc-s2); border-top: 1px solid var(--vc-line); }
+.c-checkout__changes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+/* Address list/form (Phase 8) */
+.c-addr-card { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--vc-s3); width: 100%; padding: var(--vc-s4); border: 0; border-radius: var(--vc-radius); background: var(--vc-surface); box-shadow: var(--vc-shadow); text-align: left; cursor: pointer; }
+.c-addr-card.is-selected { outline: 2px solid var(--vc-green-600); }
+.c-addr-card__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.c-addr-card__label { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+.c-addr-card__body { color: var(--vc-ink-2); font-size: var(--vc-text-sm); overflow-wrap: break-word; }
+.c-addr-card__actions { display: flex; flex-direction: column; gap: 6px; flex: none; }
+
+.c-note { padding: var(--vc-s3) var(--vc-s4); border: 2px solid var(--vc-line); border-radius: var(--vc-radius); background: var(--vc-surface); font: inherit; resize: vertical; }
+.c-note:focus { outline: none; border-color: var(--vc-green-600); }
+
+/* Order tracking / history (Phase 8) */
+.c-order-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--vc-s2); }
+.c-order-card { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: var(--vc-s4); border: 0; border-radius: var(--vc-radius); background: var(--vc-surface); box-shadow: var(--vc-shadow); text-align: left; cursor: pointer; }
+.c-order-card__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--vc-s3); }
+.c-order-card__number { font-weight: 700; }

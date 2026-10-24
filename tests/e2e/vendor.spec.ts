@@ -1,13 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { enterDevOtp, randomPhone } from "./helpers";
+import { enterDevOtp, randomPhone, selectRole, skipSplash } from "./helpers";
 
 test.use({ geolocation: { latitude: 28.4601, longitude: 77.0268 }, permissions: ["geolocation"] });
 
-test("vendor: signup → shop setup → Vendor ID → open/close visible to customers", async ({ page, browser }) => {
+test("vendor: language → role → signup → shop setup → Vendor ID → open/close visible to customers", async ({ page, browser }) => {
   await page.goto("/");
+  await skipSplash(page);
   await page.getByRole("radio", { name: /English/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "Continue" }).click(); // welcome
+
+  // one app, single role-selection step — picking Vendor here routes into the vendor half
+  await expect(page.getByRole("heading", { name: "How do you want to use VendorConnect?" })).toBeVisible();
+  await selectRole(page, "vendor");
 
   await page.getByLabel("Mobile number").fill(randomPhone());
   await page.getByLabel(/Your name/).fill("Ramesh");
@@ -49,6 +53,7 @@ test("vendor: signup → shop setup → Vendor ID → open/close visible to cust
   const customer = await browser.newContext({ ...test.info().project.use });
   const cpage = await customer.newPage();
   await cpage.goto(`http://localhost:4173/v/${vendorId.toLowerCase()}`);
+  await skipSplash(cpage);
   await expect(cpage.getByTestId("vendor-name")).toHaveText("Testwala Kirana");
   await expect(cpage.getByText("Open", { exact: true })).toBeVisible();
   await expect(cpage.getByText("Pickup only")).toBeVisible();

@@ -12,3 +12,22 @@
   .a-side nav { flex-direction: row; overflow-x: auto; }
   .a-link { white-space: nowrap; }
 }
+
+/* ---------- Moderation tables (Phase 9: Reports/Posts/Reviews) ---------- */
+.a-table { width: 100%; border-collapse: collapse; }
+.a-table th, .a-table td { text-align: left; padding: var(--vc-s3) var(--vc-s2); border-bottom: 1px solid var(--vc-line); vertical-align: top; }
+.a-table th { font-size: var(--vc-text-sm); color: var(--vc-ink-2); font-weight: 650; }
+.a-table td { font-size: var(--vc-text-sm); }
+.a-table tr.is-clickable { cursor: pointer; }
+.a-table tr.is-clickable:hover { background: var(--vc-green-50); }
+
+/* ---------- Dashboard metric cards (Phase 11) ---------- */
+.a-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--vc-s3); }
+.a-stat { display: flex; flex-direction: column; gap: 4px; padding: var(--vc-s3); border: 1px solid var(--vc-line); border-radius: var(--vc-radius-sm); }
+.a-stat__value { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.a-stat__label { font-size: var(--vc-text-sm); color: var(--vc-ink-2); }
+.a-stat-group { display: flex; flex-direction: column; gap: var(--vc-s2); }
+.a-stat-group__title { font-weight: 650; }
+
+/* ---------- Pagination (Phase 11) ---------- */
+.a-pagination { display: flex; align-items: center; gap: var(--vc-s3); justify-content: flex-end; }

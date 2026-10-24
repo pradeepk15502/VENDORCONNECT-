@@ -1,6 +1,6 @@
 import { ApiError, useSession, type LoginResult } from "@vc/api-client";
 import { useI18n } from "@vc/i18n";
-import { AppBar, Banner, Button, OtpInput, Screen, TextField } from "@vc/ui";
+import { AppBar, Banner, Button, Icon, OtpInput, Screen, TextField } from "@vc/ui";
 import { useEffect, useState, type FormEvent } from "react";
 import { errorMessage } from "./errors";
 
@@ -89,6 +89,7 @@ export function LoginFlow({
       <Screen>
         <AppBar title="" onBack={onBack} backLabel={t("common.back")} />
         <form className="vc-stack" onSubmit={send} noValidate>
+          <span className="vc-icon-badge" aria-hidden="true"><Icon name="phone" size={30} /></span>
           <h1 className="vc-h1">{title ?? t("auth.login_title")}</h1>
           <p className="vc-muted" style={{ margin: 0 }}>{t("auth.login_body")}</p>
           <TextField
@@ -106,6 +107,7 @@ export function LoginFlow({
           />
           {askName ? <TextField label={t("auth.name")} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} name="name" /> : null}
           <Button type="submit" size="lg" block loading={busy}>{t("auth.send_code")}</Button>
+          <p className="vc-finePrint">{t("auth.disclaimer")}</p>
         </form>
       </Screen>
     );
@@ -115,6 +117,7 @@ export function LoginFlow({
     <Screen>
       <AppBar title="" onBack={() => { setStep("phone"); setError(undefined); }} backLabel={t("auth.change_number")} />
       <form className="vc-stack" onSubmit={verify} noValidate>
+        <span className="vc-icon-badge" aria-hidden="true"><Icon name="shield" size={30} /></span>
         <h1 className="vc-h1">{t("auth.otp_title")}</h1>
         <p className="vc-muted" style={{ margin: 0 }}>{t("auth.otp_body", { phone: `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` })}</p>
         {devOtp ? <Banner tone="info" icon="shield"><span data-testid="dev-otp">{t("auth.dev_code", { code: devOtp })}</span></Banner> : null}

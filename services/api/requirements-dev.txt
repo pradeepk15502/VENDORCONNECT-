@@ -6,3 +6,9 @@ factory-boy==3.*
 ruff==0.*
 bandit==1.*
 pip-audit==2.*
+# Test-fixture generation only (Phase 10 AI tests render a real barcode image to prove the real
+# decode path) — never imported by application code, so it stays out of requirements.txt.
+python-barcode==0.16.*
+# Phase 13 — mocks AWS for test_s3_storage.py (a real S3 bucket, in-process; no network, no real
+# AWS account needed to test S3MediaStorage). Never imported by application code.
+moto[s3]==5.*

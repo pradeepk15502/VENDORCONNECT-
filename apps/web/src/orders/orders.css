@@ -1,0 +1,25 @@
+/* Order tracking timeline (Phase 8) — shared between the customer tracking screen and the vendor
+ * order-detail screen, since both render the same status history. */
+.o-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.o-timeline__step { position: relative; display: flex; gap: var(--vc-s3); padding-bottom: var(--vc-s4); }
+.o-timeline__step:last-child { padding-bottom: 0; }
+.o-timeline__rail { position: relative; display: flex; flex-direction: column; align-items: center; flex: none; }
+.o-timeline__dot { width: 14px; height: 14px; border-radius: 50%; background: var(--vc-line); border: 2px solid var(--vc-line); flex: none; }
+.o-timeline__step.is-done .o-timeline__dot { background: var(--vc-green-600); border-color: var(--vc-green-600); }
+.o-timeline__step.is-current .o-timeline__dot { background: var(--vc-surface); border-color: var(--vc-green-600); box-shadow: 0 0 0 3px var(--vc-green-100); }
+.o-timeline__step.is-rejected .o-timeline__dot { background: var(--vc-closed); border-color: var(--vc-closed); }
+.o-timeline__line { flex: 1; width: 2px; min-height: 20px; background: var(--vc-line); }
+.o-timeline__step.is-done .o-timeline__line { background: var(--vc-green-600); }
+.o-timeline__text { display: flex; flex-direction: column; gap: 2px; padding-top: 1px; }
+.o-timeline__label { font-weight: 650; }
+.o-timeline__step:not(.is-done):not(.is-current) .o-timeline__label { color: var(--vc-ink-3); }
+.o-timeline__time { color: var(--vc-ink-3); font-size: var(--vc-text-sm); }
+.o-timeline__note { color: var(--vc-ink-2); font-size: var(--vc-text-sm); }
+
+.o-summary-line { display: flex; justify-content: space-between; gap: var(--vc-s3); }
+.o-summary-line--total { font-weight: 800; font-size: var(--vc-text-lg); padding-top: var(--vc-s2); border-top: 1px solid var(--vc-line); }
+.o-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.o-items li { display: flex; justify-content: space-between; gap: var(--vc-s3); }
+.o-items li span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o-actions { display: flex; flex-wrap: wrap; gap: var(--vc-s3); }
+.o-actions > * { flex: 1; min-width: 140px; }

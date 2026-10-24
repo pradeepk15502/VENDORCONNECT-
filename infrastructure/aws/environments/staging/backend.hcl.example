@@ -1,0 +1,7 @@
+# Copy to backend.hcl (gitignored) after running infrastructure/aws/bootstrap-state.sh, then:
+#   terraform init -backend-config=backend.hcl
+bucket         = "vendorconnect-tfstate-REPLACE_ME"
+key            = "staging/terraform.tfstate"
+region         = "ap-south-1"
+dynamodb_table = "vendorconnect-tfstate-lock"
+encrypt        = true

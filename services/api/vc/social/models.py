@@ -25,6 +25,7 @@ class Post(TimeStampedModel):
 
     class Meta:
         indexes = [models.Index(fields=["vendor", "status", "-created_at"])]
+        permissions = [("moderate_post", "Can hide/unhide posts (admin moderation)")]
 
 
 class PostMedia(models.Model):
@@ -96,8 +97,16 @@ class Review(TimeStampedModel):
                 condition=models.Q(order__isnull=True),
                 name="one_general_review_per_vendor",
             ),
+            # Phase 9 (ARCHITECTURE D30): the Phase 0 schema had no constraint stopping a customer
+            # from submitting a second review for the same completed order — added here rather than
+            # relying on the view's pre-check alone, so a race between two concurrent submits for the
+            # same order can't both succeed (master prompt §19/§20: prevent duplicate reviews).
+            models.UniqueConstraint(
+                fields=["order"], condition=models.Q(order__isnull=False), name="uniq_review_per_order"
+            ),
         ]
         indexes = [models.Index(fields=["vendor", "status", "-created_at"])]
+        permissions = [("moderate_review", "Can hide/unhide reviews (admin moderation)")]
 
 
 class ReviewMedia(models.Model):

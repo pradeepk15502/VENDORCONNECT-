@@ -93,6 +93,7 @@ class VendorProduct(TimeStampedModel):
     AVAIL_IN_STOCK, AVAIL_LOW, AVAIL_OUT = "in_stock", "low_stock", "out_of_stock"
     AVAILABILITY = [(AVAIL_IN_STOCK, "In stock"), (AVAIL_LOW, "Low stock"), (AVAIL_OUT, "Out of stock")]
     STATUS_ACTIVE, STATUS_PAUSED, STATUS_DELETED = "active", "paused", "deleted"
+    SOURCE_MANUAL, SOURCE_AI = "manual", "ai"
 
     vendor = models.ForeignKey("vendors.Vendor", on_delete=models.CASCADE, related_name="listings")
     product = models.ForeignKey(Product, null=True, blank=True, on_delete=models.PROTECT, related_name="listings")

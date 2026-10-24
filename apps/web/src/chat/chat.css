@@ -1,0 +1,65 @@
+/* Chat (Phase 7) — shared between the customer and vendor conversation UIs. */
+
+/* Conversation list rows */
+.chat-row {
+  display: flex; align-items: center; gap: var(--vc-s3); width: 100%; min-height: 64px;
+  padding: var(--vc-s3) var(--vc-s4); border: 0; border-radius: var(--vc-radius);
+  background: var(--vc-surface); box-shadow: var(--vc-shadow); text-align: left; cursor: pointer;
+}
+.chat-row__avatar { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; flex: none; background: var(--vc-green-50); color: var(--vc-green-700); }
+.chat-row__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.chat-row__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--vc-s2); }
+.chat-row__name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-row__time { flex: none; color: var(--vc-ink-3); font-size: var(--vc-text-sm); }
+.chat-row__bottom { display: flex; justify-content: space-between; align-items: center; gap: var(--vc-s2); }
+.chat-row__preview { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vc-ink-2); font-size: var(--vc-text-sm); }
+.chat-row__closed { color: var(--vc-closed); font-weight: 600; }
+.chat-row__badge {
+  flex: none; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: var(--vc-radius-pill); background: var(--vc-green-600); color: #fff; font-size: var(--vc-text-sm); font-weight: 700;
+}
+
+/* Conversation thread */
+.chat-thread { display: flex; flex-direction: column; gap: var(--vc-s2); }
+.chat-bubble-row { display: flex; }
+.chat-bubble-row.is-mine { justify-content: flex-end; }
+.chat-bubble {
+  display: flex; flex-direction: column; gap: 4px; max-width: 80%; padding: var(--vc-s3) var(--vc-s3);
+  border-radius: 16px; background: var(--vc-surface); box-shadow: var(--vc-shadow);
+}
+.chat-bubble--mine { background: var(--vc-green-100); border-bottom-right-radius: 4px; }
+.chat-bubble--theirs { border-bottom-left-radius: 4px; }
+.chat-bubble__text { white-space: pre-wrap; overflow-wrap: break-word; }
+.chat-bubble__time { align-self: flex-end; color: var(--vc-ink-3); font-size: 11px; }
+.chat-bubble__product { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chat-bubble__product-name { font-weight: 700; }
+.chat-bubble__product-price { font-weight: 700; }
+
+/* Quick replies */
+.chat-quickreplies { display: flex; align-items: center; gap: var(--vc-s2); overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.chat-quickreplies::-webkit-scrollbar { display: none; }
+.chat-qr-row { display: flex; align-items: center; justify-content: space-between; gap: var(--vc-s2); padding: var(--vc-s2) 0; border-bottom: 1px solid var(--vc-line); }
+.chat-qr-row:last-child { border-bottom: 0; }
+
+/* Composer — sticks to the bottom of the page as it scrolls (this screen has no bottom nav to
+ * share space with, so a simple `position: sticky` avoids a full app-shell/flex-viewport rewrite). */
+.chat-composer {
+  position: sticky; bottom: 0; z-index: 1;
+  display: flex; align-items: center; gap: var(--vc-s2);
+  padding: var(--vc-s2) 0; margin-top: var(--vc-s2);
+  background: var(--vc-bg);
+}
+.chat-composer__input {
+  flex: 1; min-width: 0; min-height: 48px; padding: 0 var(--vc-s4); border-radius: var(--vc-radius-pill);
+  border: 1px solid var(--vc-line); background: var(--vc-surface); color: var(--vc-ink); font-size: var(--vc-text-md);
+}
+.chat-composer__input:disabled { opacity: 0.6; }
+.chat-composer__send { background: var(--vc-green-600); color: #fff; }
+.chat-composer__send:hover:not(:disabled) { background: var(--vc-green-700); }
+.chat-composer__send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Report modal */
+.chat-report__details {
+  width: 100%; min-height: 80px; padding: var(--vc-s3); border-radius: var(--vc-radius);
+  border: 1px solid var(--vc-line); background: var(--vc-surface); color: var(--vc-ink); font: inherit; resize: vertical;
+}

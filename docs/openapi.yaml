@@ -4,6 +4,663 @@ info:
   version: 1.0.0
   description: 'Local product discovery: find what you need at nearby shops.'
 paths:
+  /api/v1/addresses:
+    get:
+      operationId: addresses_list
+      description: |-
+        A customer's saved delivery addresses — a small, personal, unpaginated list (same shape as
+        vendor quick replies: bounded, always fetched in full).
+      tags:
+      - addresses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Address'
+          description: ''
+    post:
+      operationId: addresses_create
+      description: |-
+        A customer's saved delivery addresses — a small, personal, unpaginated list (same shape as
+        vendor quick replies: bounded, always fetched in full).
+      tags:
+      - addresses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AddressWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AddressWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+  /api/v1/addresses/{address_id}:
+    get:
+      operationId: addresses_retrieve
+      parameters:
+      - in: path
+        name: address_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - addresses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+    patch:
+      operationId: addresses_partial_update
+      parameters:
+      - in: path
+        name: address_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - addresses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+    delete:
+      operationId: addresses_destroy
+      parameters:
+      - in: path
+        name: address_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - addresses
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/admin/ai/detections:
+    get:
+      operationId: admin_ai_detections_list
+      description: |-
+        GET /admin/ai/detections — minimal operational visibility (master prompt §25): detection
+        volume, failures, which provider/model produced them. Deliberately not a second admin CRUD
+        panel — read-only, same `IsStaffRole` bar as the Phase 9 report queue.
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: pending | done | failed | confirmed | discarded
+      - in: query
+        name: vendor
+        schema:
+          type: string
+        description: Vendor handle
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIDetectionListItem'
+          description: ''
+  /api/v1/admin/audit-logs:
+    get:
+      operationId: admin_audit_logs_list
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+        description: Exact action code, e.g. vendor.verified
+      - in: query
+        name: actor
+        schema:
+          type: string
+        description: Actor's phone (exact) or user id
+      - in: query
+        name: date_from
+        schema:
+          type: string
+        description: ISO 8601 datetime, inclusive
+      - in: query
+        name: date_to
+        schema:
+          type: string
+        description: ISO 8601 datetime, inclusive
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: target_id
+        schema:
+          type: string
+      - in: query
+        name: target_type
+        schema:
+          type: string
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLog'
+          description: ''
+  /api/v1/admin/categories:
+    get:
+      operationId: admin_categories_list
+      description: |-
+        GET /admin/categories — unlike the public `/categories`, includes inactive ones and real
+        usage counts, so admin staff can spot an unused or duplicated taxonomy entry (master prompt
+        §10). Read-only: category CRUD (merge/rename) is deferred — see docs/ARCHITECTURE.md D32.
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminCategory'
+          description: ''
+  /api/v1/admin/dashboard:
+    get:
+      operationId: admin_dashboard_retrieve
+      description: |-
+        GET /admin/dashboard — real, freshly-computed platform metrics (Phase 11 §4/§5). Every count
+        is a live DB aggregate for the requested period; nothing here is cached, estimated or seeded —
+        an empty platform genuinely shows zeroes, not placeholder numbers.
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+        description: Required when range=custom.
+      - in: query
+        name: date_to
+        schema:
+          type: string
+        description: Required when range=custom.
+      - in: query
+        name: range
+        schema:
+          type: string
+          enum:
+          - 30d
+          - 7d
+          - custom
+          - today
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDashboard'
+          description: ''
+  /api/v1/admin/orders:
+    get:
+      operationId: admin_orders_list
+      description: |-
+        GET /admin/orders — read-only cross-vendor/cross-customer visibility (master prompt §23).
+        No refund/payment action lives here; `_settle_payment` (checkout/transition) is unchanged.
+      parameters:
+      - in: query
+        name: fulfilment
+        schema:
+          type: string
+        description: pickup | delivery
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Search by order number, customer name or vendor handle.
+      - in: query
+        name: status
+        schema:
+          type: string
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminOrderList'
+          description: ''
+  /api/v1/admin/orders/{order_id}:
+    get:
+      operationId: admin_orders_retrieve
+      description: |-
+        Reuses the same `OrderSerializer` both customer and vendor sides already see — deliberately
+        (master prompt §24: "minimize exposed personal information"); it already omits the customer's
+        phone number (see `_OrderCustomerRefSerializer`), which an admin support view doesn't need
+        either to answer "what happened to this order".
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/admin/products:
+    get:
+      operationId: admin_products_list
+      description: |-
+        GET /admin/products — every vendor's listing, across the whole platform (master prompt §10).
+        Read-only: admin staff identify duplicate/suspicious/inactive listings themselves by browsing
+        and filtering; nothing here writes to a vendor's own price/stock (see `AdminListingSerializer`).
+      parameters:
+      - in: query
+        name: availability
+        schema:
+          type: string
+        description: in_stock | low_stock | out_of_stock.
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category slug filter.
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Search by listing name.
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: active | paused | deleted.
+      - in: query
+        name: vendor
+        schema:
+          type: string
+        description: Vendor handle filter.
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminListing'
+          description: ''
+  /api/v1/admin/users:
+    get:
+      operationId: admin_users_list
+      description: |-
+        GET /admin/users — any staff role may view (master prompt §6); suspend/restore are gated
+        separately below by the specific `accounts.manage_users` permission, matching the coarse-list /
+        fine-action split every other admin surface in this codebase already uses (moderation, AI).
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Search by name or phone (partial match).
+      - in: query
+        name: role
+        schema:
+          type: string
+        description: customer | vendor | admin | moderator | support
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminUserList'
+          description: ''
+  /api/v1/admin/users/{user_id}:
+    get:
+      operationId: admin_users_retrieve
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDetail'
+          description: ''
+  /api/v1/admin/users/{user_id}/restore:
+    post:
+      operationId: admin_users_restore_create
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDetail'
+          description: ''
+  /api/v1/admin/users/{user_id}/suspend:
+    post:
+      operationId: admin_users_suspend_create
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserSuspendRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminUserSuspendRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminUserSuspendRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDetail'
+          description: ''
+  /api/v1/admin/vendors:
+    get:
+      operationId: admin_vendors_list
+      description: |-
+        GET /admin/vendors — any staff role may browse/search every vendor regardless of status
+        (unlike the public `/vendors` list, which only ever shows `STATUS_ACTIVE` ones).
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category slug.
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Search by shop name or Vendor ID (handle).
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: active | suspended | closed_permanently
+      - in: query
+        name: verification_status
+        schema:
+          type: string
+        description: unverified | pending | verified | rejected
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminVendorList'
+          description: ''
+  /api/v1/admin/vendors/{handle}:
+    get:
+      operationId: admin_vendors_retrieve
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+          pattern: ^@?[A-Za-z0-9]{3,16}$
+        required: true
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVendorDetail'
+          description: ''
+  /api/v1/admin/vendors/{handle}/restore:
+    post:
+      operationId: admin_vendors_restore_create
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+          pattern: ^@?[A-Za-z0-9]{3,16}$
+        required: true
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVendorDetail'
+          description: ''
+  /api/v1/admin/vendors/{handle}/suspend:
+    post:
+      operationId: admin_vendors_suspend_create
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+          pattern: ^@?[A-Za-z0-9]{3,16}$
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminVendorSuspendRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminVendorSuspendRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminVendorSuspendRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVendorDetail'
+          description: ''
+  /api/v1/admin/vendors/{handle}/verify:
+    post:
+      operationId: admin_vendors_verify_create
+      description: |-
+        POST /admin/vendors/{handle}/verify — records a real decision in `VendorVerification` (a
+        Phase-0 schema table that existed but nothing wrote to before this) and updates the vendor's
+        live `verification_status`. Reuses the `vendors.verify_vendor` Django permission already
+        declared on `Vendor.Meta` since Phase 8/9 — no new permission needed.
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+          pattern: ^@?[A-Za-z0-9]{3,16}$
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminVendorVerifyDecisionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminVendorVerifyDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminVendorVerifyDecisionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVendorDetail'
+          description: ''
   /api/v1/admin/whoami:
     get:
       operationId: admin_whoami_retrieve
@@ -19,6 +676,93 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminWhoAmI'
+          description: ''
+  /api/v1/ai/detections:
+    post:
+      operationId: ai_detections_create
+      description: |-
+        POST creates a scan; GET-like history lives at `/vendors/me/ai-detections` instead, so this
+        stays a plain creation endpoint (mirrors `VendorProductCollectionView`'s split).
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIDetectRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AIDetectRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AIDetectRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIDetection'
+          description: ''
+  /api/v1/ai/detections/{id}:
+    get:
+      operationId: ai_detections_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIDetection'
+          description: ''
+  /api/v1/ai/detections/{id}/confirm:
+    post:
+      operationId: ai_detections_confirm_create
+      description: |-
+        POST /ai/detections/{id}/confirm — the vendor's edited final values, in the exact same shape
+        as manual `POST /vendor-products` (master prompt §17: "the final action must be explicit; the
+        AI must never automatically publish").
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorProductCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorProductCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorProductCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorProduct'
           description: ''
   /api/v1/auth/admin/password:
     post:
@@ -188,6 +932,107 @@ paths:
               schema:
                 $ref: '#/components/schemas/Access'
           description: ''
+  /api/v1/cart:
+    get:
+      operationId: cart_list
+      description: |-
+        A customer's own cart — a small, personal, unpaginated list (same shape as vendor quick
+        replies). Vendor-aware: items carry their own vendor, grouped client-side (ARCHITECTURE D29).
+      tags:
+      - cart
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CartItem'
+          description: ''
+    post:
+      operationId: cart_create
+      description: |-
+        A customer's own cart — a small, personal, unpaginated list (same shape as vendor quick
+        replies). Vendor-aware: items carry their own vendor, grouped client-side (ARCHITECTURE D29).
+      tags:
+      - cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartAddRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CartAddRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CartAddRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+          description: ''
+  /api/v1/cart/items/{item_id}:
+    patch:
+      operationId: cart_items_partial_update
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCartUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCartUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCartUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+          description: ''
+    delete:
+      operationId: cart_items_destroy
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - cart
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/categories:
     get:
       operationId: categories_list
@@ -212,10 +1057,1398 @@ paths:
                 items:
                   $ref: '#/components/schemas/Category'
           description: ''
+  /api/v1/chats:
+    get:
+      operationId: chats_list
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Filter by the other side's name/shop name
+      - in: query
+        name: role
+        schema:
+          type: string
+          enum:
+          - customer
+          - vendor
+        required: true
+      tags:
+      - chats
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Chat'
+          description: ''
+    post:
+      operationId: chats_create
+      description: 'Customer-only: get-or-create the chat with a vendor (D14: the
+        customer always starts it).'
+      tags:
+      - chats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatStartRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChatStartRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatStartRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+  /api/v1/chats/{chat_id}:
+    get:
+      operationId: chats_retrieve
+      parameters:
+      - in: path
+        name: chat_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chats
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+  /api/v1/chats/{chat_id}/block:
+    post:
+      operationId: chats_block_create
+      description: |-
+        Registered twice in urls.py — once with `blocked_value=True` (`/block`), once with
+        `blocked_value=False` (`/unblock`) — the standard Django `as_view(**initkwargs)` pattern.
+      parameters:
+      - in: path
+        name: chat_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chats
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/chats/{chat_id}/messages:
+    get:
+      operationId: chats_messages_retrieve
+      parameters:
+      - in: query
+        name: after
+        schema:
+          type: integer
+        description: Poll for messages newer than this cursor
+      - in: query
+        name: before
+        schema:
+          type: integer
+        description: Load messages older than this cursor
+      - in: path
+        name: chat_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chats
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessagePage'
+          description: ''
+    post:
+      operationId: chats_messages_create
+      parameters:
+      - in: path
+        name: chat_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageCreateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/v1/chats/{chat_id}/read:
+    post:
+      operationId: chats_read_create
+      parameters:
+      - in: path
+        name: chat_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chats
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/chats/{chat_id}/report:
+    post:
+      operationId: chats_report_create
+      parameters:
+      - in: path
+        name: chat_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportChatRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReportChatRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReportChatRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatReportAck'
+          description: ''
+  /api/v1/chats/{chat_id}/unblock:
+    post:
+      operationId: chats_unblock_create
+      description: |-
+        Registered twice in urls.py — once with `blocked_value=True` (`/block`), once with
+        `blocked_value=False` (`/unblock`) — the standard Django `as_view(**initkwargs)` pattern.
+      parameters:
+      - in: path
+        name: chat_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chats
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/checkout:
+    post:
+      operationId: checkout_create
+      description: |-
+        Atomic order creation. Re-derives everything from `build_checkout_context` *inside* the
+        transaction, with the vendor's cart-referenced listings row-locked, so a vendor edit racing this
+        request either lands before (and gets caught by the revalidation) or waits until after (and the
+        next checkout attempt sees it) — never in between.
+      tags:
+      - checkout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/checkout/summary:
+    get:
+      operationId: checkout_summary_retrieve
+      description: |-
+        Powers the Pickup/Delivery selection, Address selection and Order Review screens — the same
+        numbers, recomputed live every time any of those three choices changes.
+      parameters:
+      - in: query
+        name: address_id
+        schema:
+          type: string
+      - in: query
+        name: fulfilment
+        schema:
+          type: string
+          enum:
+          - delivery
+          - pickup
+        required: true
+      - in: query
+        name: vendor
+        schema:
+          type: string
+        required: true
+      tags:
+      - checkout
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSummary'
+          description: ''
+  /api/v1/feed:
+    get:
+      operationId: feed_list
+      description: |-
+        GET /feed — "From Shops You Follow" (master prompt §8/§30): real posts from vendors the
+        customer follows, newest first. Empty (not an error) for a customer who follows no one yet.
+      tags:
+      - feed
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+          description: ''
+  /api/v1/following:
+    get:
+      operationId: following_list
+      description: |-
+        GET /following — the customer's own Following list (master prompt §7), with optional
+        `lat`/`lng` for a distance column, same opt-in shape as `/vendors`.
+      parameters:
+      - in: query
+        name: lat
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        schema:
+          type: number
+          format: double
+      tags:
+      - following
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FollowedVendor'
+          description: ''
+  /api/v1/inventory:
+    post:
+      operationId: inventory_create
+      description: POST /inventory — one-tap stock updates, the InventoryEvent audit
+        trail's write path.
+      tags:
+      - inventory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InventoryUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InventoryUpdateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorProduct'
+          description: ''
+  /api/v1/listings/{listing_id}/reviews:
+    get:
+      operationId: listings_reviews_list
+      description: |-
+        GET /listings/{id}/reviews (master prompt §38's `/products/{id}/reviews`, mapped onto this
+        project's own "listing" vocabulary — see docs/API.md conventions).
+      parameters:
+      - in: path
+        name: listing_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - listings
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+          description: ''
+  /api/v1/listings/{id}:
+    get:
+      operationId: listings_retrieve
+      description: |-
+        GET /listings/{id} (Phase 9, ARCHITECTURE D30) — the standalone product-detail page a Post
+        or Review's "View Product" link opens. Public, like the vendor profile's Products tab; a
+        listing on a suspended/closed vendor, or one that's been deleted/paused, 404s rather than
+        showing stale/unavailable data.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - listings
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingDetail'
+          description: ''
+  /api/v1/media:
+    post:
+      operationId: media_create
+      description: |-
+        POST /media (multipart) — general-purpose upload used today by the vendor "Create Post"
+        flow (Phase 9). Any authenticated user may upload (a future avatar/review-photo feature reuses
+        the same endpoint); ownership is recorded so a later feature can enforce "only your own media"
+        without a schema change.
+      tags:
+      - media
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MediaUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+          description: ''
+  /api/v1/moderation/posts:
+    get:
+      operationId: moderation_posts_list
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+      - in: query
+        name: vendor
+        schema:
+          type: string
+      tags:
+      - moderation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminPost'
+          description: ''
+  /api/v1/moderation/posts/{post_id}/hide:
+    post:
+      operationId: moderation_posts_hide_create
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - moderation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPost'
+          description: ''
+  /api/v1/moderation/posts/{post_id}/unhide:
+    post:
+      operationId: moderation_posts_unhide_create
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - moderation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPost'
+          description: ''
+  /api/v1/moderation/reports:
+    get:
+      operationId: moderation_reports_list
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: open | reviewing | resolved | dismissed
+      - in: query
+        name: target_type
+        schema:
+          type: string
+      tags:
+      - moderation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+          description: ''
+  /api/v1/moderation/reports/{report_id}/resolve:
+    post:
+      operationId: moderation_reports_resolve_create
+      parameters:
+      - in: path
+        name: report_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - moderation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportResolveRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReportResolveRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReportResolveRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+          description: ''
+  /api/v1/moderation/reviews:
+    get:
+      operationId: moderation_reviews_list
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+      - in: query
+        name: vendor
+        schema:
+          type: string
+      tags:
+      - moderation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminReview'
+          description: ''
+  /api/v1/moderation/reviews/{review_id}/hide:
+    post:
+      operationId: moderation_reviews_hide_create
+      parameters:
+      - in: path
+        name: review_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - moderation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminReview'
+          description: ''
+  /api/v1/moderation/reviews/{review_id}/unhide:
+    post:
+      operationId: moderation_reviews_unhide_create
+      parameters:
+      - in: path
+        name: review_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - moderation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminReview'
+          description: ''
+  /api/v1/notifications:
+    get:
+      operationId: notifications_list
+      description: |-
+        GET /notifications — real events written by order (Phase 8) and future chat/review triggers,
+        replacing the "coming soon" placeholder both NotificationsScreens have shown since Phase 1.
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/notifications/{notification_id}/read:
+    post:
+      operationId: notifications_read_create
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/notifications/read-all:
+    post:
+      operationId: notifications_read_all_create
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/orders:
+    get:
+      operationId: orders_list
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          type: string
+          enum:
+          - customer
+          - vendor
+        required: true
+      - in: query
+        name: status
+        schema:
+          type: string
+      tags:
+      - orders
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/orders/{order_id}:
+    get:
+      operationId: orders_retrieve
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - orders
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/orders/{order_id}/reviews:
+    post:
+      operationId: orders_reviews_create
+      description: |-
+        POST /orders/{id}/reviews (Phase 9, ARCHITECTURE D30) — the only way to create a review in
+        this app: always for a specific completed order, never a bare vendor handle (master prompt
+        §17: "reviews must be tied to genuine completed transactions"). Eligibility is resolved the
+        same way every other order endpoint resolves identity — from the authenticated session, never
+        a client-supplied vendor/order id pairing — and re-checked at the database via `uniq_review_per_order`.
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+  /api/v1/orders/{order_id}/transition:
+    post:
+      operationId: orders_transition_create
+      description: |-
+        One endpoint, one table (`vc.orders.transitions`) — see ARCHITECTURE D29 for why this replaces
+        eight near-duplicate accept/reject/preparing/... endpoints.
+      parameters:
+      - in: path
+        name: order_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderTransitionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderTransitionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderTransitionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/posts/{post_id}:
+    get:
+      operationId: posts_retrieve
+      description: |-
+        GET is public for a published post (the customer Post Detail screen — master prompt §15);
+        a hidden/removed post 404s for everyone except the owning vendor, so moderation never leaks
+        through a direct link. PATCH/DELETE are vendor-owner-only.
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+    patch:
+      operationId: posts_partial_update
+      description: |-
+        GET is public for a published post (the customer Post Detail screen — master prompt §15);
+        a hidden/removed post 404s for everyone except the owning vendor, so moderation never leaks
+        through a direct link. PATCH/DELETE are vendor-owner-only.
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPostUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPostUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPostUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+    delete:
+      operationId: posts_destroy
+      description: |-
+        GET is public for a published post (the customer Post Detail screen — master prompt §15);
+        a hidden/removed post 404s for everyone except the owning vendor, so moderation never leaks
+        through a direct link. PATCH/DELETE are vendor-owner-only.
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/posts/{post_id}/report:
+    post:
+      operationId: posts_report_create
+      parameters:
+      - in: path
+        name: post_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportPostRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReportPostRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReportPostRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: No response body
+  /api/v1/prices:
+    post:
+      operationId: prices_create
+      description: POST /prices — changes a listing's price, the PriceHistory audit
+        trail's write path.
+      tags:
+      - prices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PriceUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceUpdateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorProduct'
+          description: ''
+  /api/v1/reviews/{review_id}/reply:
+    post:
+      operationId: reviews_reply_create
+      description: |-
+        POST /reviews/{id}/reply — vendor-owner-only (404, not 403, for someone else's review —
+        same "don't confirm it exists" shape `VendorProductDetailView` already uses).
+      parameters:
+      - in: path
+        name: review_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewReplyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewReplyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewReplyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+  /api/v1/reviews/{review_id}/report:
+    post:
+      operationId: reviews_report_create
+      parameters:
+      - in: path
+        name: review_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReportReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReportReviewRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: No response body
+  /api/v1/reviews/mine:
+    get:
+      operationId: reviews_mine_list
+      description: |-
+        GET /reviews/mine — the customer's own "My Reviews" (master prompt §29). Every status is
+        shown (not just published) so a customer can see a review of theirs was moderated, rather than
+        have it silently vanish.
+      tags:
+      - reviews
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MyReview'
+          description: ''
+  /api/v1/search:
+    get:
+      operationId: search_list
+      description: |-
+        GET /search — product/vendor search, ranked per ARCHITECTURE D10. Public; no login required
+        (customers can browse before signing in — D17).
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category slug filter.
+      - in: query
+        name: delivery
+        schema:
+          type: boolean
+        description: Only vendors offering delivery.
+      - in: query
+        name: in_stock_only
+        schema:
+          type: boolean
+        description: Exclude out-of-stock listings.
+      - in: query
+        name: lat
+        schema:
+          type: number
+          format: double
+        description: Customer's current latitude (sent per request, never stored —
+          ARCHITECTURE D11).
+        required: true
+      - in: query
+        name: lng
+        schema:
+          type: number
+          format: double
+        description: Customer's current longitude.
+        required: true
+      - in: query
+        name: open_now
+        schema:
+          type: boolean
+        description: Only vendors currently open.
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: pickup
+        schema:
+          type: boolean
+        description: Only vendors offering pickup.
+      - in: query
+        name: price_max
+        schema:
+          type: number
+          format: double
+        description: Maximum listing price.
+      - in: query
+        name: price_min
+        schema:
+          type: number
+          format: double
+        description: Minimum listing price.
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: 'Free text: product name, alias, or Hindi. Blank = browse (use
+          with `category`).'
+      - in: query
+        name: radius_km
+        schema:
+          type: number
+          format: double
+        description: Geo-filter radius (0.5–25.0). Default 5.0.
+      tags:
+      - search
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchResult'
+          description: ''
+  /api/v1/vendor-products:
+    get:
+      operationId: vendor_products_list
+      description: |-
+        GET lists the signed-in vendor's own listings. POST creates one. Not to be confused with the
+        public GET /search (customer-facing, geo-ranked across all vendors).
+      parameters:
+      - in: query
+        name: availability
+        schema:
+          type: string
+        description: in_stock | low_stock | out_of_stock.
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category slug filter.
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: 'active | paused | deleted. Default: active + paused (everything
+          currently listed).'
+      tags:
+      - vendor-products
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VendorProduct'
+          description: ''
+    post:
+      operationId: vendor_products_create
+      description: |-
+        GET lists the signed-in vendor's own listings. POST creates one. Not to be confused with the
+        public GET /search (customer-facing, geo-ranked across all vendors).
+      tags:
+      - vendor-products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorProductCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorProductCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorProductCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorProduct'
+          description: ''
+  /api/v1/vendor-products/{id}:
+    get:
+      operationId: vendor_products_retrieve
+      description: |-
+        A single listing owned by the signed-in vendor. DELETE is a soft delete (`status=deleted`) —
+        PriceHistory/InventoryEvent rows are kept for the audit trail rather than cascaded away.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - vendor-products
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorProduct'
+          description: ''
+    patch:
+      operationId: vendor_products_partial_update
+      description: |-
+        A single listing owned by the signed-in vendor. DELETE is a soft delete (`status=deleted`) —
+        PriceHistory/InventoryEvent rows are kept for the audit trail rather than cascaded away.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - vendor-products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedVendorProductUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedVendorProductUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVendorProductUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorProduct'
+          description: ''
+    delete:
+      operationId: vendor_products_destroy
+      description: |-
+        A single listing owned by the signed-in vendor. DELETE is a soft delete (`status=deleted`) —
+        PriceHistory/InventoryEvent rows are kept for the audit trail rather than cascaded away.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - vendor-products
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/vendors:
+    get:
+      operationId: vendors_list
+      description: |-
+        GET /vendors — nearby vendor discovery (ARCHITECTURE D22). Open shops first, then
+        nearest; optionally filtered to a category. Mirrors /search's geo-filter (D10) but ranks
+        by open/distance only — there's no text query or product-relevance signal to weigh here.
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category slug filter.
+      - in: query
+        name: delivery
+        schema:
+          type: boolean
+        description: Only vendors offering delivery.
+      - in: query
+        name: lat
+        schema:
+          type: number
+          format: double
+        description: Customer's current latitude (sent per request, never stored —
+          ARCHITECTURE D11).
+        required: true
+      - in: query
+        name: lng
+        schema:
+          type: number
+          format: double
+        description: Customer's current longitude.
+        required: true
+      - in: query
+        name: open_now
+        schema:
+          type: boolean
+        description: Only vendors currently open.
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: pickup
+        schema:
+          type: boolean
+        description: Only vendors offering pickup.
+      - in: query
+        name: radius_km
+        schema:
+          type: number
+          format: double
+        description: Geo-filter radius (0.5–25.0). Default 5.0.
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VendorList'
+          description: ''
     post:
       operationId: vendors_create
-      description: Create my shop (vendor onboarding). Issues the unique Vendor ID.
+      description: |-
+        POST creates my shop (vendor onboarding, issues the unique Vendor ID). GET lists nearby
+        vendors — public, no login required (customers can browse before signing in — D17).
       tags:
       - vendors
       requestBody:
@@ -262,6 +2495,137 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorPublic'
           description: ''
+  /api/v1/vendors/{handle}/follow:
+    post:
+      operationId: vendors_follow_create
+      description: |-
+        POST /vendors/{handle}/follow — idempotent: following an already-followed vendor just
+        returns the current state (200), same shape as chat's get-or-create-a-chat pattern. Concurrency
+        safety comes from `uniq_follow` (DB constraint) + `get_or_create`'s own atomic retry-on-conflict,
+        not from any lock taken here (master prompt §5: "safe concurrent follow requests").
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowState'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowState'
+          description: ''
+  /api/v1/vendors/{handle}/posts:
+    get:
+      operationId: vendors_posts_list
+      description: GET /vendors/{handle}/posts — the profile's "Posts" tab. Public;
+        published only.
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+          description: ''
+  /api/v1/vendors/{handle}/products:
+    get:
+      operationId: vendors_products_list
+      description: |-
+        GET /vendors/@SHARMA001/products — the profile's "Products" tab (Phase 8, ARCHITECTURE D29).
+        Public, no geo-ranking needed (the vendor is already chosen); in-stock/low-stock listings sort
+        ahead of out-of-stock ones, then alphabetically.
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+          pattern: ^@?[A-Za-z0-9]{3,16}$
+        required: true
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VendorProductPublic'
+          description: ''
+  /api/v1/vendors/{handle}/reviews:
+    get:
+      operationId: vendors_reviews_list
+      description: GET /vendors/{handle}/reviews — the profile's "Reviews" tab. Public;
+        published only.
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+          description: ''
+  /api/v1/vendors/{handle}/unfollow:
+    post:
+      operationId: vendors_unfollow_create
+      description: POST /vendors/{handle}/unfollow — idempotent (200 whether or not
+        you were following).
+      parameters:
+      - in: path
+        name: handle
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowState'
+          description: ''
   /api/v1/vendors/me:
     get:
       operationId: vendors_me_retrieve
@@ -300,6 +2664,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorOwner'
           description: ''
+  /api/v1/vendors/me/ai-detections:
+    get:
+      operationId: vendors_me_ai_detections_list
+      description: |-
+        GET /vendors/me/ai-detections — the vendor's own scan history (master prompt §19). An audit
+        trail, not a second product list: it never appears anywhere a customer can see.
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIDetectionListItem'
+          description: ''
   /api/v1/vendors/me/delivery:
     patch:
       operationId: vendors_me_delivery_partial_update
@@ -325,6 +2708,112 @@ paths:
               schema:
                 $ref: '#/components/schemas/Delivery'
           description: ''
+  /api/v1/vendors/me/posts:
+    get:
+      operationId: vendors_me_posts_list
+      description: |-
+        GET lists every post this vendor has ever made (any status, including admin-hidden/removed
+        — a vendor should see moderation outcomes on their own content, not have it vanish silently).
+        POST publishes a new one from already-uploaded media (see `vc.assets`).
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+          description: ''
+    post:
+      operationId: vendors_me_posts_create
+      description: |-
+        GET lists every post this vendor has ever made (any status, including admin-hidden/removed
+        — a vendor should see moderation outcomes on their own content, not have it vanish silently).
+        POST publishes a new one from already-uploaded media (see `vc.assets`).
+      tags:
+      - vendors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PostCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PostCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+  /api/v1/vendors/me/quick-replies:
+    get:
+      operationId: vendors_me_quick_replies_list
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuickReply'
+          description: ''
+    post:
+      operationId: vendors_me_quick_replies_create
+      tags:
+      - vendors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuickReplyCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QuickReplyCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuickReplyCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickReply'
+          description: ''
+  /api/v1/vendors/me/quick-replies/{reply_id}:
+    delete:
+      operationId: vendors_me_quick_replies_destroy
+      parameters:
+      - in: path
+        name: reply_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/vendors/me/status:
     post:
       operationId: vendors_me_status_create
@@ -352,8 +2841,218 @@ paths:
               schema:
                 $ref: '#/components/schemas/ShopStatus'
           description: ''
+  /api/v1/vendors/me/summary:
+    get:
+      operationId: vendors_me_summary_retrieve
+      description: GET /vendors/me/summary — the dashboard's stat tiles, in one query
+        (ARCHITECTURE D25).
+      tags:
+      - vendors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorSummary'
+          description: ''
 components:
   schemas:
+    AIDetectRequestRequest:
+      type: object
+      description: |-
+        POST /ai/detections. `image_id` must be an image the caller uploaded themselves (checked in
+        the view, never trusted from a client-supplied owner/vendor field — master prompt §20).
+      properties:
+        image_id:
+          type: string
+          format: uuid
+      required:
+      - image_id
+    AIDetection:
+      type: object
+      description: Full detail for one scan — what the confirmation screen renders
+        (master prompt §17).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          type: string
+          maxLength: 10
+        image_url:
+          type: string
+          nullable: true
+          readOnly: true
+        provider:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        predictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIPrediction'
+        barcode:
+          type: string
+          maxLength: 32
+        ocr_text:
+          type: string
+          maxLength: 500
+        suggested_price:
+          allOf:
+          - $ref: '#/components/schemas/AISuggestedPrice'
+          nullable: true
+        existing_listing:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        error:
+          type: string
+          maxLength: 200
+        vendor_corrected:
+          type: boolean
+          description: vendor chose a different product (training signal)
+        latency_ms:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - existing_listing
+      - id
+      - image_url
+      - message
+      - predictions
+      - provider
+      - suggested_price
+    AIDetectionListItem:
+      type: object
+      description: |-
+        Lightweight row for the vendor's own scan history and the admin operational list (master
+        prompt §19/§25) — never a second product listing surface, just an audit trail.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        vendor_handle:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          maxLength: 10
+        top_label:
+          type: string
+          nullable: true
+          readOnly: true
+        top_confidence:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+        provider:
+          type: string
+          nullable: true
+          readOnly: true
+        error:
+          type: string
+          maxLength: 200
+        vendor_corrected:
+          type: boolean
+          description: vendor chose a different product (training signal)
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - provider
+      - top_confidence
+      - top_label
+      - vendor_handle
+    AIPrediction:
+      type: object
+      description: |-
+        Read-only shape of one entry already stored in `AIDetection.predictions` (a plain dict —
+        see `vc/ai/detection.py::_sanitize_prediction`).
+      properties:
+        product_slug:
+          type: string
+          nullable: true
+        product_name:
+          type: string
+          nullable: true
+        variety_id:
+          type: string
+          nullable: true
+        variety_name:
+          type: string
+          nullable: true
+        category_slug:
+          type: string
+          nullable: true
+        category_name:
+          type: string
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+        label:
+          type: string
+        confidence:
+          type: number
+          format: double
+        band:
+          type: string
+        source:
+          type: string
+      required:
+      - band
+      - category_name
+      - category_slug
+      - confidence
+      - label
+      - product_name
+      - product_slug
+      - source
+      - unit
+      - variety_id
+      - variety_name
+    AISuggestedPrice:
+      type: object
+      properties:
+        min:
+          type: string
+        max:
+          type: string
+        unit:
+          type: string
+        region:
+          type: string
+        source:
+          type: string
+        observed_at:
+          type: string
+      required:
+      - max
+      - min
+      - observed_at
+      - region
+      - source
+      - unit
     Access:
       type: object
       properties:
@@ -364,6 +3063,349 @@ components:
           description: only when sent in the body (native clients)
       required:
       - access
+    ActionEnum:
+      enum:
+      - accept
+      - reject
+      - preparing
+      - ready
+      - picked_up
+      - out_for_delivery
+      - delivered
+      - completed
+      - cancel
+      type: string
+      description: |-
+        * `accept` - accept
+        * `reject` - reject
+        * `preparing` - preparing
+        * `ready` - ready
+        * `picked_up` - picked_up
+        * `out_for_delivery` - out_for_delivery
+        * `delivered` - delivered
+        * `completed` - completed
+        * `cancel` - cancel
+    Address:
+      type: object
+      description: |-
+        Read shape. `lat`/`lng` are null when the address was saved without a captured location
+        (text-only entry is allowed — ARCHITECTURE D29 — but such an address can't be used for delivery
+        eligibility, since that needs real coordinates to measure distance from).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        label:
+          type: string
+          maxLength: 40
+        line1:
+          type: string
+          maxLength: 200
+        line2:
+          type: string
+          maxLength: 200
+        landmark:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          maxLength: 80
+        state:
+          type: string
+          maxLength: 80
+        pincode:
+          type: string
+          maxLength: 6
+        lat:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+        is_default:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - city
+      - created_at
+      - id
+      - lat
+      - line1
+      - lng
+      - pincode
+    AddressWriteRequest:
+      type: object
+      description: |-
+        Write shape for POST/PATCH. `lat`/`lng` are optional (see `AddressSerializer`) but must be
+        given together — a half-set coordinate isn't a usable point.
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 40
+        line1:
+          type: string
+          minLength: 1
+          maxLength: 200
+        line2:
+          type: string
+          maxLength: 200
+        landmark:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        state:
+          type: string
+          maxLength: 80
+        pincode:
+          type: string
+          minLength: 1
+          maxLength: 6
+        lat:
+          type: number
+          format: double
+          maximum: 37.5
+          minimum: 6.0
+          nullable: true
+        lng:
+          type: number
+          format: double
+          maximum: 97.5
+          minimum: 68.0
+          nullable: true
+        is_default:
+          type: boolean
+    AdminCategory:
+      type: object
+      description: |-
+        Includes inactive categories and real usage counts — the public `CategorySerializer` above
+        deliberately omits both (it's a customer-facing browse list), but an admin auditing the taxonomy
+        for "problematic taxonomy entries" (master prompt §10) needs exactly what's hidden from customers.
+      properties:
+        slug:
+          type: string
+          maxLength: 60
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 80
+        icon:
+          type: string
+          maxLength: 40
+        sort_order:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        is_active:
+          type: boolean
+        product_count:
+          type: integer
+          readOnly: true
+        listing_count:
+          type: integer
+          readOnly: true
+        vendor_count:
+          type: integer
+          readOnly: true
+      required:
+      - listing_count
+      - name
+      - product_count
+      - slug
+      - vendor_count
+    AdminDashboard:
+      type: object
+      description: |-
+        GET /admin/dashboard — every number here is a real, freshly-run DB aggregate for the
+        requested period; there is no cached or fabricated figure (master prompt §4: "Do not fabricate
+        numbers. If there is no data: show 0 / empty state.").
+      properties:
+        range:
+          $ref: '#/components/schemas/RangeEnum'
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        users:
+          $ref: '#/components/schemas/_UserMetrics'
+        vendors:
+          $ref: '#/components/schemas/_VendorMetrics'
+        products:
+          $ref: '#/components/schemas/_ProductMetrics'
+        orders:
+          $ref: '#/components/schemas/_OrderMetrics'
+        moderation:
+          $ref: '#/components/schemas/_ModerationMetrics'
+        ai:
+          $ref: '#/components/schemas/_AIMetrics'
+      required:
+      - ai
+      - moderation
+      - orders
+      - period_end
+      - period_start
+      - products
+      - range
+      - users
+      - vendors
+    AdminListing:
+      type: object
+      description: |-
+        A vendor's listing (`VendorProduct`), for admin catalog visibility (master prompt §10) — read
+        only. Admin staff can browse/filter to spot duplicates or suspicious entries themselves; nothing
+        here lets an admin silently edit a vendor's own price/stock (master prompt: "do not silently
+        alter vendor-owned pricing or inventory").
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        vendor:
+          allOf:
+          - $ref: '#/components/schemas/_AdminListingVendorRef'
+          readOnly: true
+        name:
+          type: string
+          description: Display name (defaults to product name)
+          maxLength: 120
+        product_slug:
+          type: string
+          readOnly: true
+        category:
+          type: string
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        status:
+          type: string
+          maxLength: 10
+        source:
+          type: string
+          description: manual | ai
+          maxLength: 10
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - category
+      - created_at
+      - id
+      - name
+      - price
+      - product_slug
+      - unit
+      - updated_at
+      - vendor
+    AdminOrderFulfilmentEnum:
+      enum:
+      - pickup
+      - delivery
+      type: string
+      description: |-
+        * `pickup` - Pickup
+        * `delivery` - Delivery
+    AdminOrderList:
+      type: object
+      description: |-
+        List row for GET /admin/orders — read-only operational visibility (master prompt §23). No
+        payment/refund actions here; `_settle_payment` (checkout/transition flows) is the only writer of
+        `Payment` rows, unchanged by Phase 11.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+          description: human-friendly, e.g. VC-24X7K9
+          maxLength: 20
+        customer_name:
+          type: string
+          readOnly: true
+        vendor_handle:
+          type: string
+          readOnly: true
+        vendor_shop_name:
+          type: string
+          readOnly: true
+        fulfilment:
+          $ref: '#/components/schemas/AdminOrderFulfilmentEnum'
+        status:
+          $ref: '#/components/schemas/AdminOrderStatusEnum'
+        payment_method:
+          type: string
+          description: cash | upi | online
+          maxLength: 12
+        payment_status:
+          type: string
+          nullable: true
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - customer_name
+      - fulfilment
+      - id
+      - number
+      - payment_status
+      - total
+      - vendor_handle
+      - vendor_shop_name
+    AdminOrderStatusEnum:
+      enum:
+      - placed
+      - accepted
+      - rejected
+      - preparing
+      - ready
+      - out_for_delivery
+      - delivered
+      - picked_up
+      - completed
+      - cancelled
+      type: string
+      description: |-
+        * `placed` - Placed
+        * `accepted` - Accepted
+        * `rejected` - Rejected
+        * `preparing` - Preparing
+        * `ready` - Ready
+        * `out_for_delivery` - Out For Delivery
+        * `delivered` - Delivered
+        * `picked_up` - Picked Up
+        * `completed` - Completed
+        * `cancelled` - Cancelled
     AdminPasswordRequest:
       type: object
       properties:
@@ -378,6 +3420,372 @@ components:
       required:
       - password
       - phone
+    AdminPost:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        vendor_handle:
+          type: string
+          readOnly: true
+        shop_name:
+          type: string
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/PostKindEnum'
+        caption:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          maxLength: 10
+        like_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - shop_name
+      - vendor_handle
+    AdminReview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        vendor_handle:
+          type: string
+          readOnly: true
+        author_name:
+          type: string
+          readOnly: true
+        rating:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        text:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          maxLength: 10
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author_name
+      - created_at
+      - id
+      - rating
+      - vendor_handle
+    AdminUserDetail:
+      type: object
+      description: |-
+        List row. No password/OTP/token fields — those never leave the auth layer at all (master
+        prompt §7/§24).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          description: E.164, e.g. +919876543210
+          maxLength: 16
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        roles:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        suspended_at:
+          type: string
+          format: date-time
+          nullable: true
+        vendor:
+          allOf:
+          - $ref: '#/components/schemas/_AdminVendorRef'
+          nullable: true
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+        suspension_reason:
+          type: string
+          readOnly: true
+        order_count:
+          type: integer
+          readOnly: true
+        reports_filed_count:
+          type: integer
+          readOnly: true
+        reports_against_count:
+          type: integer
+          readOnly: true
+      required:
+      - id
+      - order_count
+      - phone
+      - reports_against_count
+      - reports_filed_count
+      - roles
+      - suspension_reason
+      - vendor
+    AdminUserList:
+      type: object
+      description: |-
+        List row. No password/OTP/token fields — those never leave the auth layer at all (master
+        prompt §7/§24).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          description: E.164, e.g. +919876543210
+          maxLength: 16
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        roles:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        suspended_at:
+          type: string
+          format: date-time
+          nullable: true
+        vendor:
+          allOf:
+          - $ref: '#/components/schemas/_AdminVendorRef'
+          nullable: true
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - phone
+      - roles
+      - vendor
+    AdminUserSuspendRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+      required:
+      - reason
+    AdminVendorDetail:
+      type: object
+      properties:
+        handle:
+          type: string
+          readOnly: true
+        shop_name:
+          type: string
+          maxLength: 120
+        owner:
+          allOf:
+          - $ref: '#/components/schemas/_AdminOwnerRef'
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/AdminVendorStatusEnum'
+        verification_status:
+          $ref: '#/components/schemas/VerificationStatusEnum'
+        city:
+          type: string
+          default: ''
+        categories:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        is_open:
+          type: boolean
+          description: Manual shop status; source of truth for customers
+        rating_avg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+        rating_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        follower_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        public_phone:
+          type: string
+          description: Shown to customers for calls
+          maxLength: 16
+        location:
+          allOf:
+          - $ref: '#/components/schemas/LocationOut'
+          nullable: true
+          readOnly: true
+        hours:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        delivery:
+          allOf:
+          - $ref: '#/components/schemas/Delivery'
+          readOnly: true
+        product_count:
+          type: integer
+          readOnly: true
+        post_count:
+          type: integer
+          readOnly: true
+        review_count:
+          type: integer
+          readOnly: true
+        order_count:
+          type: integer
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        status_changed_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - categories
+      - created_at
+      - delivery
+      - handle
+      - hours
+      - location
+      - order_count
+      - owner
+      - post_count
+      - product_count
+      - review_count
+      - shop_name
+    AdminVendorList:
+      type: object
+      properties:
+        handle:
+          type: string
+          readOnly: true
+        shop_name:
+          type: string
+          maxLength: 120
+        owner:
+          allOf:
+          - $ref: '#/components/schemas/_AdminOwnerRef'
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/AdminVendorStatusEnum'
+        verification_status:
+          $ref: '#/components/schemas/VerificationStatusEnum'
+        city:
+          type: string
+          default: ''
+        categories:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        is_open:
+          type: boolean
+          description: Manual shop status; source of truth for customers
+        rating_avg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+        rating_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        follower_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - categories
+      - created_at
+      - handle
+      - owner
+      - shop_name
+    AdminVendorStatusEnum:
+      enum:
+      - active
+      - suspended
+      - closed_permanently
+      type: string
+      description: |-
+        * `active` - Active
+        * `suspended` - Suspended
+        * `closed_permanently` - Closed
+    AdminVendorSuspendRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+      required:
+      - reason
+    AdminVendorVerifyDecisionRequest:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        notes:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - decision
     AdminWhoAmI:
       type: object
       properties:
@@ -399,6 +3807,136 @@ components:
       - name
       - permissions
       - roles
+    AuditLog:
+      type: object
+      description: |-
+        Admin-facing read shape. `ip_hash`/`request_id` are left off deliberately — they're
+        operational/debugging fields with no moderation value, and the admin panel's own privacy
+        principle (master prompt §24: "minimize exposed personal information") argues for the smaller
+        surface rather than exposing every column just because the model has it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        actor_name:
+          type: string
+          nullable: true
+          readOnly: true
+        actor_role:
+          type: string
+          maxLength: 12
+        action:
+          type: string
+          description: e.g. vendor.verified, auth.login
+          maxLength: 60
+        target_type:
+          type: string
+          maxLength: 40
+        target_id:
+          type: string
+          maxLength: 64
+        metadata: {}
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - actor_name
+      - created_at
+      - id
+    AvailabilityEnum:
+      enum:
+      - in_stock
+      - low_stock
+      - out_of_stock
+      type: string
+      description: |-
+        * `in_stock` - In stock
+        * `low_stock` - Low stock
+        * `out_of_stock` - Out of stock
+    CartAddRequest:
+      type: object
+      properties:
+        listing_id:
+          type: string
+          format: uuid
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          default: '1.00'
+        note:
+          type: string
+          default: ''
+          maxLength: 200
+      required:
+      - listing_id
+    CartItem:
+      type: object
+      description: |-
+        One cart row. Price/availability are always read live off the listing (never cached on the
+        cart item) — ARCHITECTURE D29: the cart can never show a stale number by construction, since
+        there is nowhere for a stale one to be stored.
+      properties:
+        id:
+          type: string
+          format: uuid
+        listing_id:
+          type: string
+          format: uuid
+        listing_status:
+          type: string
+        name:
+          type: string
+        unit:
+          type: string
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        mrp:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        availability:
+          type: string
+        vendor:
+          $ref: '#/components/schemas/_CartVendor'
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        note:
+          type: string
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        added_at:
+          type: string
+          format: date-time
+      required:
+      - added_at
+      - availability
+      - id
+      - line_total
+      - listing_id
+      - listing_status
+      - mrp
+      - name
+      - note
+      - price
+      - quantity
+      - unit
+      - unit_quantity
+      - vendor
     Category:
       type: object
       properties:
@@ -425,6 +3963,237 @@ components:
       - name
       - parent
       - slug
+    Chat:
+      type: object
+      description: |-
+        One row of `GET /chats` — built with `context={"role": "customer"|"vendor"}` so the same
+        conversation renders correctly from either side.
+      properties:
+        id:
+          type: string
+          format: uuid
+        other:
+          type: object
+          additionalProperties: {}
+          description: _ChatVendorSerializer or _ChatCustomerSerializer, by role
+          readOnly: true
+        last_message:
+          allOf:
+          - $ref: '#/components/schemas/_LastMessagePreview'
+          nullable: true
+          readOnly: true
+        unread_count:
+          type: integer
+        blocked_by_me:
+          type: boolean
+          readOnly: true
+        blocked_by_them:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - blocked_by_me
+      - blocked_by_them
+      - created_at
+      - id
+      - last_message
+      - other
+      - unread_count
+    ChatMessageKindEnum:
+      enum:
+      - text
+      - product
+      type: string
+      description: |-
+        * `text` - text
+        * `product` - product
+    ChatMessagePage:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        has_more:
+          type: boolean
+      required:
+      - has_more
+      - results
+    ChatReportAck:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    ChatStartRequest:
+      type: object
+      description: POST /chats — a customer starting (or reopening) a conversation
+        with a vendor.
+      properties:
+        vendor:
+          type: string
+          minLength: 1
+      required:
+      - vendor
+    CheckoutFulfilmentEnum:
+      enum:
+      - pickup
+      - delivery
+      type: string
+      description: |-
+        * `pickup` - pickup
+        * `delivery` - delivery
+    CheckoutItem:
+      type: object
+      properties:
+        listing_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        unit:
+          type: string
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        availability:
+          type: string
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        problem:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ProblemEnum'
+          - $ref: '#/components/schemas/NullEnum'
+      required:
+      - availability
+      - line_total
+      - listing_id
+      - name
+      - price
+      - problem
+      - quantity
+      - unit
+      - unit_quantity
+    CheckoutRequest:
+      type: object
+      properties:
+        vendor:
+          type: string
+          minLength: 1
+        fulfilment:
+          $ref: '#/components/schemas/CheckoutFulfilmentEnum'
+        address_id:
+          type: string
+          format: uuid
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        customer_note:
+          type: string
+          default: ''
+          maxLength: 300
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 64
+        expected_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpectedItemRequest'
+        simulate_failure:
+          type: boolean
+          default: false
+          description: Dev/test only — forces the mock payment to fail.
+      required:
+      - expected_items
+      - fulfilment
+      - idempotency_key
+      - payment_method
+      - vendor
+    CheckoutSummary:
+      type: object
+      properties:
+        vendor:
+          $ref: '#/components/schemas/_CartVendor'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutItem'
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        fulfilment:
+          type: string
+        pickup_available:
+          type: boolean
+        delivery_available:
+          type: boolean
+        address:
+          allOf:
+          - $ref: '#/components/schemas/Address'
+          nullable: true
+        distance_km:
+          type: number
+          format: double
+          nullable: true
+        delivery_eligible:
+          type: boolean
+          nullable: true
+        delivery_ineligible_reason:
+          type: string
+          nullable: true
+        delivery_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        can_place_order:
+          type: boolean
+        payment_methods:
+          type: array
+          items:
+            type: string
+      required:
+      - address
+      - can_place_order
+      - delivery_available
+      - delivery_eligible
+      - delivery_fee
+      - delivery_ineligible_reason
+      - distance_km
+      - fulfilment
+      - items
+      - payment_methods
+      - pickup_available
+      - subtotal
+      - total
+      - vendor
+    DecisionEnum:
+      enum:
+      - verified
+      - rejected
+      type: string
+      description: |-
+        * `verified` - verified
+        * `rejected` - rejected
     Delivery:
       type: object
       properties:
@@ -449,6 +4218,144 @@ components:
           format: decimal
           pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
           nullable: true
+    ExpectedItemRequest:
+      type: object
+      description: |-
+        What the customer's checkout screen last showed for one line — the staleness check compares
+        this to the truth recomputed at commit time (ARCHITECTURE D29).
+      properties:
+        listing_id:
+          type: string
+          format: uuid
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        availability:
+          type: string
+          minLength: 1
+      required:
+      - availability
+      - listing_id
+      - price
+    FollowState:
+      type: object
+      properties:
+        following:
+          type: boolean
+        follower_count:
+          type: integer
+      required:
+      - follower_count
+      - following
+    FollowedVendor:
+      type: object
+      description: |-
+        A vendor card for `GET /following` — the public shape plus distance, when the caller sent
+        `lat`/`lng` (same optional-distance pattern as `/vendors`); `null` otherwise.
+      properties:
+        handle:
+          type: string
+          readOnly: true
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+          maxLength: 120
+        verified:
+          type: boolean
+          readOnly: true
+        is_open:
+          type: boolean
+          description: Manual shop status; source of truth for customers
+        status_changed_at:
+          type: string
+          format: date-time
+          nullable: true
+        public_phone:
+          type: string
+          description: Shown to customers for calls
+          maxLength: 16
+        categories:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        rating_avg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+        rating_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        follower_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_following:
+          type: boolean
+          readOnly: true
+        location:
+          allOf:
+          - $ref: '#/components/schemas/LocationOut'
+          nullable: true
+          readOnly: true
+        delivery:
+          allOf:
+          - $ref: '#/components/schemas/Delivery'
+          readOnly: true
+        bio:
+          type: string
+          default: ''
+        distance_km:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+      required:
+      - categories
+      - delivery
+      - distance_km
+      - handle
+      - is_following
+      - location
+      - shop_name
+      - vendor_id
+      - verified
+    FreshnessEnum:
+      enum:
+      - fresh
+      - aging
+      - stale
+      type: string
+      description: |-
+        * `fresh` - fresh
+        * `aging` - aging
+        * `stale` - stale
+    InventoryUpdateRequest:
+      type: object
+      description: |-
+        POST /inventory — one-tap stock updates. `client_mutation_id` makes a retried/offline-queued
+        submission idempotent (DATABASE.md `uniq_inventory_mutation`): replaying the same mutation id
+        returns the already-applied state instead of double-recording it.
+      properties:
+        listing_id:
+          type: string
+          format: uuid
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        client_mutation_id:
+          type: string
+          maxLength: 64
+      required:
+      - availability
+      - listing_id
     LanguageEnum:
       enum:
       - en
@@ -457,6 +4364,93 @@ components:
       description: |-
         * `en` - en
         * `hi` - hi
+    ListingDetail:
+      type: object
+      description: |-
+        GET /listings/{id} (Phase 9) — the standalone product-detail page a Post/Review "View
+        Product" link opens (master prompt §12/§15). Same customer-facing listing shape as the vendor
+        profile's Products tab (`VendorProductPublicSerializer`), plus enough vendor context to render
+        without a second round trip — this project has no separate "product page" outside a vendor's
+        own shop (ARCHITECTURE.md: "find the product, find the local shop" stays one screen).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product:
+          type: object
+          nullable: true
+          properties:
+            slug:
+              type: string
+            name:
+              type: string
+          readOnly: true
+        category:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          description: Display name (defaults to product name)
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 1000
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        mrp:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          description: price is per N units
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        freshness:
+          allOf:
+          - $ref: '#/components/schemas/FreshnessEnum'
+          readOnly: true
+        stock_updated_at:
+          type: string
+          format: date-time
+        vendor:
+          allOf:
+          - $ref: '#/components/schemas/ListingVendorRef'
+          readOnly: true
+      required:
+      - category
+      - freshness
+      - id
+      - name
+      - price
+      - product
+      - stock_updated_at
+      - unit
+      - vendor
+    ListingVendorRef:
+      type: object
+      properties:
+        handle:
+          type: string
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+        is_open:
+          type: boolean
+      required:
+      - handle
+      - is_open
+      - shop_name
+      - vendor_id
     LocationInRequest:
       type: object
       properties:
@@ -579,6 +4573,372 @@ components:
       - phone
       - roles
       - vendor
+    MediaAsset:
+      type: object
+      description: |-
+        `url` is the full-size (image: `large` variant) file; `variant_urls` gives every size a
+        caller can pick from. Both are resolved through the storage abstraction, never a raw key —
+        a caller never needs to know whether that key lives on disk or in a bucket.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/MediaAssetKindEnum'
+        content_type:
+          type: string
+          maxLength: 60
+        size_bytes:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        width:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        height:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        variant_urls:
+          type: object
+          additionalProperties:
+            type: string
+            format: uri
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - content_type
+      - created_at
+      - id
+      - kind
+      - size_bytes
+      - url
+      - variant_urls
+    MediaAssetKindEnum:
+      enum:
+      - image
+      - video
+      type: string
+      description: |-
+        * `image` - Image
+        * `video` - Video
+    MediaUploadRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+      required:
+      - file
+    Message:
+      type: object
+      description: |-
+        `public_id` is the message's real identity; the numeric row id is only ever exposed as an
+        opaque `cursor` for polling/pagination, never labelled as the message's id.
+      properties:
+        id:
+          type: string
+          format: uuid
+        cursor:
+          type: integer
+        sender_side:
+          type: string
+        kind:
+          type: string
+        text:
+          type: string
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/_MessageListing'
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - cursor
+      - id
+      - kind
+      - listing
+      - sender_side
+      - text
+    MessageCreateRequest:
+      type: object
+      properties:
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/ChatMessageKindEnum'
+          default: text
+        text:
+          type: string
+          default: ''
+          maxLength: 2000
+        listing_id:
+          type: string
+          format: uuid
+        client_message_id:
+          type: string
+          default: ''
+          maxLength: 64
+    MyReview:
+      type: object
+      description: |-
+        `GET /reviews/mine` (master prompt §29's Customer Profile "My Reviews") — the one place a
+        review is shown to its own author with which shop it's for, and its moderation `status`, since
+        a customer should be able to see a review of theirs was hidden rather than have it vanish
+        silently (master prompt §25's audit-not-erase rule, from the author's own side).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        author_name:
+          type: string
+          readOnly: true
+        rating:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        text:
+          type: string
+          maxLength: 1000
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/ReviewListingRef'
+          nullable: true
+          readOnly: true
+        order_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        verified_purchase:
+          type: boolean
+          readOnly: true
+        vendor_reply:
+          type: string
+          maxLength: 1000
+        vendor_replied_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        vendor:
+          $ref: '#/components/schemas/PostVendorRef'
+        status:
+          type: string
+          maxLength: 10
+      required:
+      - author_name
+      - created_at
+      - id
+      - listing
+      - order_id
+      - rating
+      - vendor
+      - verified_purchase
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          type: string
+          description: order_status | new_message | back_in_stock | new_post | low_stock
+            | new_review | system
+          maxLength: 40
+        title:
+          type: string
+          maxLength: 140
+        body:
+          type: string
+          maxLength: 500
+        data:
+          description: deep-link payload
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - kind
+      - title
+    NullEnum:
+      enum:
+      - null
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+          description: human-friendly, e.g. VC-24X7K9
+          maxLength: 20
+        vendor:
+          $ref: '#/components/schemas/_OrderVendorRef'
+        customer:
+          $ref: '#/components/schemas/_OrderCustomerRef'
+        fulfilment:
+          $ref: '#/components/schemas/AdminOrderFulfilmentEnum'
+        status:
+          $ref: '#/components/schemas/AdminOrderStatusEnum'
+        delivery_address:
+          nullable: true
+          description: snapshot; only for delivery
+        customer_note:
+          type: string
+          maxLength: 300
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        delivery_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        payment_method:
+          type: string
+          description: cash | upi | online
+          maxLength: 12
+        payment_status:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_provider:
+          type: string
+          nullable: true
+          readOnly: true
+        rejection_reason:
+          type: string
+          maxLength: 200
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+          readOnly: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderStatusEvent'
+          readOnly: true
+        review_id:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - customer
+      - events
+      - fulfilment
+      - id
+      - items
+      - number
+      - payment_provider
+      - payment_status
+      - review_id
+      - subtotal
+      - total
+      - updated_at
+      - vendor
+    OrderItem:
+      type: object
+      properties:
+        listing:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          maxLength: 120
+        unit:
+          type: string
+          maxLength: 10
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      required:
+      - line_total
+      - name
+      - quantity
+      - unit
+      - unit_price
+    OrderStatusEvent:
+      type: object
+      description: |-
+        `actor_side` is precomputed onto each event by the view (`_attach_order_extras`) — cheaper
+        than a method field re-deriving it per row from `event.order`, which isn't otherwise loaded.
+      properties:
+        status:
+          type: string
+        note:
+          type: string
+        actor_side:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - actor_side
+      - created_at
+      - note
+      - status
+    OrderTransitionRequest:
+      type: object
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        reason:
+          type: string
+          default: ''
+          maxLength: 200
+      required:
+      - action
     OtpRequestRequest:
       type: object
       properties:
@@ -631,6 +4991,61 @@ components:
       required:
       - code
       - phone
+    PatchedAddressWriteRequest:
+      type: object
+      description: |-
+        Write shape for POST/PATCH. `lat`/`lng` are optional (see `AddressSerializer`) but must be
+        given together — a half-set coordinate isn't a usable point.
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 40
+        line1:
+          type: string
+          minLength: 1
+          maxLength: 200
+        line2:
+          type: string
+          maxLength: 200
+        landmark:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        state:
+          type: string
+          maxLength: 80
+        pincode:
+          type: string
+          minLength: 1
+          maxLength: 6
+        lat:
+          type: number
+          format: double
+          maximum: 37.5
+          minimum: 6.0
+          nullable: true
+        lng:
+          type: number
+          format: double
+          maximum: 97.5
+          minimum: 68.0
+          nullable: true
+        is_default:
+          type: boolean
+    PatchedCartUpdateRequest:
+      type: object
+      properties:
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        note:
+          type: string
+          maxLength: 200
     PatchedDeliveryRequest:
       type: object
       properties:
@@ -669,6 +5084,68 @@ components:
           type: string
           minLength: 1
           maxLength: 8
+    PatchedPostUpdateRequest:
+      type: object
+      description: |-
+        Edit surface (master prompt §14 "Edit where appropriate") — caption and the attached
+        products only. Media and kind are immutable after publish: reworking a post's pictures is, in
+        effect, a new post, and keeping that boundary keeps `MediaAsset` ownership/validation simple.
+      properties:
+        caption:
+          type: string
+          maxLength: 1000
+        listing_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        comments_enabled:
+          type: boolean
+    PatchedVendorProductUpdateRequest:
+      type: object
+      description: |-
+        PATCH /vendor-products/{id} — descriptive fields only. `price`, `availability` and `quantity`
+        are rejected here (with a pointer to the right endpoint) since they belong to the append-only
+        audit tables and must go through POST /prices / POST /inventory instead.
+      properties:
+        category:
+          type: string
+          minLength: 1
+        product:
+          type: string
+          minLength: 1
+          nullable: true
+        variety:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          minLength: 1
+          description: Display name (defaults to product name)
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 1000
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          description: price is per N units
+        mrp:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        low_stock_threshold:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        status:
+          $ref: '#/components/schemas/VendorProductUpdateStatusEnum'
     PatchedVendorUpdateRequest:
       type: object
       properties:
@@ -683,6 +5160,227 @@ components:
         bio:
           type: string
           maxLength: 500
+    PaymentMethodEnum:
+      enum:
+      - cash
+      - upi
+      - online
+      type: string
+      description: |-
+        * `cash` - cash
+        * `upi` - upi
+        * `online` - online
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        vendor:
+          $ref: '#/components/schemas/PostVendorRef'
+        kind:
+          $ref: '#/components/schemas/PostKindEnum'
+        caption:
+          type: string
+          maxLength: 1000
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMediaItem'
+        linked_listings:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostLinkedListing'
+        comments_enabled:
+          type: boolean
+        status:
+          type: string
+          maxLength: 10
+        like_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        offer_valid_until:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - linked_listings
+      - media
+      - updated_at
+      - vendor
+    PostCreateKindEnum:
+      enum:
+      - photo
+      - video
+      - new_stock
+      - offer
+      - update
+      type: string
+      description: |-
+        * `photo` - photo
+        * `video` - video
+        * `new_stock` - new_stock
+        * `offer` - offer
+        * `update` - update
+    PostCreateRequest:
+      type: object
+      properties:
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/PostCreateKindEnum'
+          default: photo
+        caption:
+          type: string
+          default: ''
+          maxLength: 1000
+        media_asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 6
+          minItems: 1
+        listing_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        comments_enabled:
+          type: boolean
+          default: false
+        offer_valid_until:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - media_asset_ids
+    PostKindEnum:
+      enum:
+      - photo
+      - video
+      - new_stock
+      - offer
+      - update
+      type: string
+      description: |-
+        * `photo` - Photo
+        * `video` - Video
+        * `new_stock` - New stock
+        * `offer` - Offer
+        * `update` - Shop update
+    PostLinkedListing:
+      type: object
+      description: |-
+        A minimal, real product card for "Fresh Tomato Stock — ₹30/kg — In Stock" inside a post —
+        only what's needed to render that card and to link through to `/listings/{id}` (master prompt
+        §12: "Clicking the product must open the real product detail page").
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        unit:
+          type: string
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        availability:
+          type: string
+      required:
+      - availability
+      - id
+      - name
+      - price
+      - unit
+      - unit_quantity
+    PostMediaItem:
+      type: object
+      description: |-
+        One `PostMedia` row, resolved through the same `MediaAssetSerializer` a fresh upload returns
+        — a post's media is never a second copy of the file, always a reference to its `MediaAsset`.
+      properties:
+        id:
+          type: string
+          format: uuid
+        position:
+          type: integer
+        kind:
+          type: string
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        variant_urls:
+          type: object
+          additionalProperties:
+            type: string
+            format: uri
+          readOnly: true
+      required:
+      - id
+      - kind
+      - position
+      - url
+      - variant_urls
+    PostVendorRef:
+      type: object
+      properties:
+        handle:
+          type: string
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+        is_open:
+          type: boolean
+      required:
+      - handle
+      - is_open
+      - shop_name
+      - vendor_id
+    PriceUpdateRequest:
+      type: object
+      description: POST /prices — changes a listing's price, filing a PriceHistory
+        row.
+      properties:
+        listing_id:
+          type: string
+          format: uuid
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      required:
+      - listing_id
+      - price
+    ProblemEnum:
+      enum:
+      - out_of_stock
+      - insufficient_stock
+      - listing_removed
+      type: string
+      description: |-
+        * `out_of_stock` - out_of_stock
+        * `insufficient_stock` - insufficient_stock
+        * `listing_removed` - listing_removed
     PurposeEnum:
       enum:
       - login
@@ -691,12 +5389,348 @@ components:
       description: |-
         * `login` - login
         * `admin` - admin
+    QuickReply:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        text:
+          type: string
+          maxLength: 200
+        position:
+          type: integer
+          readOnly: true
+      required:
+      - id
+      - position
+      - text
+    QuickReplyCreateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - text
+    RangeEnum:
+      enum:
+      - today
+      - 7d
+      - 30d
+      - custom
+      type: string
+      description: |-
+        * `today` - today
+        * `7d` - 7d
+        * `30d` - 30d
+        * `custom` - custom
     RefreshRequest:
       type: object
       properties:
         refresh:
           type: string
           minLength: 1
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        reporter_name:
+          type: string
+          readOnly: true
+        target_type:
+          $ref: '#/components/schemas/TargetTypeEnum'
+        target_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          description: spam | wrong_info | abusive | fraud | other
+          maxLength: 40
+        details:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          description: open | reviewing | resolved | dismissed
+          maxLength: 12
+        resolution:
+          type: string
+          maxLength: 500
+        handled_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - handled_by_name
+      - id
+      - reason
+      - reporter_name
+      - target_id
+      - target_type
+    ReportChatReasonEnum:
+      enum:
+      - spam
+      - wrong_info
+      - abusive
+      - fraud
+      - other
+      type: string
+      description: |-
+        * `spam` - spam
+        * `wrong_info` - wrong_info
+        * `abusive` - abusive
+        * `fraud` - fraud
+        * `other` - other
+    ReportChatRequest:
+      type: object
+      properties:
+        reason:
+          $ref: '#/components/schemas/ReportChatReasonEnum'
+        details:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - reason
+    ReportPostReasonEnum:
+      enum:
+      - spam
+      - misleading
+      - inappropriate
+      - fake_offer
+      - other
+      type: string
+      description: |-
+        * `spam` - spam
+        * `misleading` - misleading
+        * `inappropriate` - inappropriate
+        * `fake_offer` - fake_offer
+        * `other` - other
+    ReportPostRequest:
+      type: object
+      properties:
+        reason:
+          $ref: '#/components/schemas/ReportPostReasonEnum'
+        details:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - reason
+    ReportResolveRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ReportResolveStatusEnum'
+        resolution:
+          type: string
+          default: ''
+          maxLength: 500
+        hide_target:
+          type: boolean
+          default: false
+      required:
+      - status
+    ReportResolveStatusEnum:
+      enum:
+      - resolved
+      - dismissed
+      type: string
+      description: |-
+        * `resolved` - resolved
+        * `dismissed` - dismissed
+    ReportReviewReasonEnum:
+      enum:
+      - spam
+      - abuse
+      - fake
+      - offensive
+      - other
+      type: string
+      description: |-
+        * `spam` - spam
+        * `abuse` - abuse
+        * `fake` - fake
+        * `offensive` - offensive
+        * `other` - other
+    ReportReviewRequest:
+      type: object
+      properties:
+        reason:
+          $ref: '#/components/schemas/ReportReviewReasonEnum'
+        details:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - reason
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        author_name:
+          type: string
+          readOnly: true
+        rating:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        text:
+          type: string
+          maxLength: 1000
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/ReviewListingRef'
+          nullable: true
+          readOnly: true
+        order_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        verified_purchase:
+          type: boolean
+          readOnly: true
+        vendor_reply:
+          type: string
+          maxLength: 1000
+        vendor_replied_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author_name
+      - created_at
+      - id
+      - listing
+      - order_id
+      - rating
+      - verified_purchase
+    ReviewCreateRequest:
+      type: object
+      description: |-
+        Used from `POST /orders/{id}/reviews` (vc.orders.views) — `context["order"]` is the
+        already-authorized, already-completed order the review is being written for (master prompt
+        §19/§20: eligibility and ownership are resolved server-side before this ever runs).
+      properties:
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+        text:
+          type: string
+          default: ''
+          maxLength: 1000
+        listing_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - rating
+    ReviewListingRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
+    ReviewReplyRequest:
+      type: object
+      properties:
+        vendor_reply:
+          type: string
+          minLength: 1
+          maxLength: 1000
+      required:
+      - vendor_reply
+    SearchResult:
+      type: object
+      description: One vendor's listing, enriched with distance and freshness for
+        ranking transparency.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        mrp:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          type: string
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        availability:
+          type: string
+        category:
+          type: string
+          readOnly: true
+        product:
+          type: object
+          nullable: true
+          properties:
+            slug:
+              type: string
+            name:
+              type: string
+          readOnly: true
+        freshness:
+          allOf:
+          - $ref: '#/components/schemas/FreshnessEnum'
+          readOnly: true
+        stock_updated_at:
+          type: string
+          format: date-time
+        distance_km:
+          type: number
+          format: double
+          readOnly: true
+        vendor:
+          allOf:
+          - $ref: '#/components/schemas/_SearchVendor'
+          readOnly: true
+      required:
+      - availability
+      - category
+      - distance_km
+      - freshness
+      - id
+      - mrp
+      - name
+      - price
+      - product
+      - stock_updated_at
+      - unit
+      - unit_quantity
+      - vendor
     ShopStatus:
       type: object
       properties:
@@ -711,16 +5745,54 @@ components:
           type: boolean
       required:
       - is_open
-    StatusEnum:
+    TargetTypeEnum:
       enum:
-      - active
-      - suspended
-      - closed_permanently
+      - vendor
+      - listing
+      - post
+      - review
+      - message
+      - user
+      - order
       type: string
       description: |-
-        * `active` - Active
-        * `suspended` - Suspended
-        * `closed_permanently` - Closed
+        * `vendor` - vendor
+        * `listing` - listing
+        * `post` - post
+        * `review` - review
+        * `message` - message
+        * `user` - user
+        * `order` - order
+    UnitEnum:
+      enum:
+      - kg
+      - g
+      - l
+      - ml
+      - piece
+      - dozen
+      - packet
+      - bundle
+      - box
+      - pair
+      - strip
+      - bottle
+      - meter
+      type: string
+      description: |-
+        * `kg` - kg
+        * `g` - g
+        * `l` - litre
+        * `ml` - ml
+        * `piece` - piece
+        * `dozen` - dozen
+        * `packet` - packet
+        * `bundle` - bundle
+        * `box` - box
+        * `pair` - pair
+        * `strip` - strip
+        * `bottle` - bottle
+        * `meter` - metre
     VendorCreateRequest:
       type: object
       properties:
@@ -748,6 +5820,80 @@ components:
       - category_slugs
       - location
       - shop_name
+    VendorList:
+      type: object
+      description: |-
+        A vendor card for browsing (Home 'Shops near you', the Vendors tab) — the public shape
+        plus distance, from a queryset annotated with `.annotate(distance=Distance(...))`.
+      properties:
+        handle:
+          type: string
+          readOnly: true
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+          maxLength: 120
+        verified:
+          type: boolean
+          readOnly: true
+        is_open:
+          type: boolean
+          description: Manual shop status; source of truth for customers
+        status_changed_at:
+          type: string
+          format: date-time
+          nullable: true
+        public_phone:
+          type: string
+          description: Shown to customers for calls
+          maxLength: 16
+        categories:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        rating_avg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+        rating_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        follower_count:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_following:
+          type: boolean
+          readOnly: true
+        location:
+          allOf:
+          - $ref: '#/components/schemas/LocationOut'
+          nullable: true
+          readOnly: true
+        delivery:
+          allOf:
+          - $ref: '#/components/schemas/Delivery'
+          readOnly: true
+        bio:
+          type: string
+          default: ''
+        distance_km:
+          type: number
+          format: double
+          readOnly: true
+      required:
+      - categories
+      - delivery
+      - distance_km
+      - handle
+      - is_following
+      - location
+      - shop_name
+      - vendor_id
+      - verified
     VendorOwner:
       type: object
       description: What any customer sees. No owner info, no internal ids beyond the
@@ -792,6 +5938,9 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
+        is_following:
+          type: boolean
+          readOnly: true
         location:
           allOf:
           - $ref: '#/components/schemas/LocationOut'
@@ -805,7 +5954,7 @@ components:
           type: string
           default: ''
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/AdminVendorStatusEnum'
         verification_status:
           $ref: '#/components/schemas/VerificationStatusEnum'
         onboarding_step:
@@ -820,10 +5969,253 @@ components:
       - created_at
       - delivery
       - handle
+      - is_following
       - location
       - shop_name
       - vendor_id
       - verified
+    VendorProduct:
+      type: object
+      description: |-
+        A vendor's own listing, full detail — the read shape for GET /vendor-products[/{id}] and the
+        response after create/update/stock/price changes.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product:
+          type: object
+          nullable: true
+          properties:
+            slug:
+              type: string
+            name:
+              type: string
+          readOnly: true
+        category:
+          type: string
+          readOnly: true
+        variety:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+          readOnly: true
+        name:
+          type: string
+          description: Display name (defaults to product name)
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 1000
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        mrp:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          description: price is per N units
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+          description: optional count
+        low_stock_threshold:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        status:
+          type: string
+          maxLength: 10
+        stock_updated_at:
+          type: string
+          format: date-time
+        price_updated_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          description: manual | ai
+          maxLength: 10
+        freshness:
+          allOf:
+          - $ref: '#/components/schemas/FreshnessEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - category
+      - created_at
+      - freshness
+      - id
+      - name
+      - price
+      - price_updated_at
+      - product
+      - stock_updated_at
+      - unit
+      - updated_at
+      - variety
+    VendorProductCreateRequest:
+      type: object
+      description: |-
+        POST /vendor-products. `product`/`variety` are optional (ARCHITECTURE D8 — a vendor may list
+        a custom item outside the shared catalog; `name` is always required so a listing is never
+        unnamed). Sets the initial price/stock and files the first PriceHistory/InventoryEvent rows so
+        every listing has a complete audit trail from creation, not just from its first edit.
+      properties:
+        category:
+          type: string
+          minLength: 1
+        product:
+          type: string
+          minLength: 1
+          nullable: true
+        variety:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          minLength: 1
+          description: Display name (defaults to product name)
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 1000
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        mrp:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          description: price is per N units
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+          description: optional count
+        low_stock_threshold:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        availability:
+          allOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          default: in_stock
+      required:
+      - category
+      - name
+      - price
+      - unit
+    VendorProductPublic:
+      type: object
+      description: |-
+        Customer-facing shape for GET /vendors/{handle}/products (Phase 8, ARCHITECTURE D29) — the
+        vendor profile's "Products" tab. Mirrors what `SearchResultSerializer` already shows a customer
+        per listing: no raw stock counts or vendor-internal fields (`quantity`, `low_stock_threshold`,
+        `source`, `status`) — a customer only ever needs to know in/low/out of stock, never the exact
+        count a vendor is managing their shelf with.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product:
+          type: object
+          nullable: true
+          properties:
+            slug:
+              type: string
+            name:
+              type: string
+          readOnly: true
+        category:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          description: Display name (defaults to product name)
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 1000
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        mrp:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        unit_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          description: price is per N units
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        freshness:
+          allOf:
+          - $ref: '#/components/schemas/FreshnessEnum'
+          readOnly: true
+        stock_updated_at:
+          type: string
+          format: date-time
+      required:
+      - category
+      - freshness
+      - id
+      - name
+      - price
+      - product
+      - stock_updated_at
+      - unit
+    VendorProductUpdateStatusEnum:
+      enum:
+      - active
+      - paused
+      type: string
+      description: |-
+        * `active` - active
+        * `paused` - paused
     VendorPublic:
       type: object
       description: What any customer sees. No owner info, no internal ids beyond the
@@ -868,6 +6260,9 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
+        is_following:
+          type: boolean
+          readOnly: true
         location:
           allOf:
           - $ref: '#/components/schemas/LocationOut'
@@ -884,6 +6279,7 @@ components:
       - categories
       - delivery
       - handle
+      - is_following
       - location
       - shop_name
       - vendor_id
@@ -898,6 +6294,32 @@ components:
       required:
       - handle
       - shop_name
+    VendorSummary:
+      type: object
+      description: |-
+        GET /vendors/me/summary (Phase 5) — the vendor dashboard's stat tiles, computed for real
+        from the vendor's own listings in one aggregate query (ARCHITECTURE D25). No orders/sales
+        fields here: those need the order system (Phase 8) and showing a fake 0 until then would be
+        exactly the fabricated data the project brief forbids — the dashboard omits those tiles.
+      properties:
+        is_open:
+          type: boolean
+        status_changed_at:
+          type: string
+          format: date-time
+          nullable: true
+        product_count:
+          type: integer
+        low_stock_count:
+          type: integer
+        out_of_stock_count:
+          type: integer
+      required:
+      - is_open
+      - low_stock_count
+      - out_of_stock_count
+      - product_count
+      - status_changed_at
     VerificationStatusEnum:
       enum:
       - unverified
@@ -910,6 +6332,276 @@ components:
         * `pending` - Pending review
         * `verified` - Verified
         * `rejected` - Rejected
+    _AIMetrics:
+      type: object
+      properties:
+        detections:
+          type: integer
+          description: Scans attempted within the selected period.
+        failed_detections:
+          type: integer
+        dev_scanner_usage:
+          type: integer
+          description: 'Detections from a model version flagged is_development (currently:
+            all of them — see docs/AI.md).'
+      required:
+      - detections
+      - dev_scanner_usage
+      - failed_detections
+    _AdminListingVendorRef:
+      type: object
+      properties:
+        handle:
+          type: string
+        shop_name:
+          type: string
+      required:
+      - handle
+      - shop_name
+    _AdminOwnerRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+      required:
+      - id
+      - name
+      - phone
+    _AdminVendorRef:
+      type: object
+      properties:
+        handle:
+          type: string
+        shop_name:
+          type: string
+      required:
+      - handle
+      - shop_name
+    _CartVendor:
+      type: object
+      description: |-
+        A cart row's vendor group header — enough to render the group and gate its checkout button
+        (closed shop, pickup/delivery availability) without a second request per vendor.
+      properties:
+        handle:
+          type: string
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+        status:
+          type: string
+        is_open:
+          type: boolean
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+      required:
+      - delivery
+      - handle
+      - is_open
+      - shop_name
+      - status
+      - vendor_id
+    _LastMessagePreview:
+      type: object
+      description: |-
+        Documentation-only shape of `get_last_message`'s dict — it is built from four separate
+        `last_message_*` annotations/attributes, never from a real `Message` instance.
+      properties:
+        text:
+          type: string
+        kind:
+          type: string
+        sender_side:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - kind
+      - sender_side
+      - text
+    _MessageListing:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        unit:
+          type: string
+      required:
+      - id
+      - name
+      - price
+      - unit
+    _ModerationMetrics:
+      type: object
+      properties:
+        open_reports:
+          type: integer
+          description: Current backlog (open/reviewing), not period-scoped.
+        reported_posts:
+          type: integer
+          description: Distinct posts newly reported within the period.
+        reported_reviews:
+          type: integer
+          description: Distinct reviews newly reported within the period.
+        hidden_content:
+          type: integer
+          description: Currently-hidden posts + reviews, not period-scoped.
+      required:
+      - hidden_content
+      - open_reports
+      - reported_posts
+      - reported_reviews
+    _OrderCustomerRef:
+      type: object
+      description: |-
+        What the *vendor* side sees about the buyer — name only, never phone (the same D14 rule
+        `_ChatCustomerSerializer` already enforces for chat).
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
+    _OrderMetrics:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Orders placed within the selected period.
+        pending:
+          type: integer
+          description: 'In-flight: not yet completed, cancelled or rejected.'
+        completed:
+          type: integer
+        cancelled:
+          type: integer
+          description: Cancelled or rejected.
+      required:
+      - cancelled
+      - completed
+      - pending
+      - total
+    _OrderVendorRef:
+      type: object
+      properties:
+        handle:
+          type: string
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+        public_phone:
+          type: string
+        is_open:
+          type: boolean
+      required:
+      - handle
+      - is_open
+      - public_phone
+      - shop_name
+      - vendor_id
+    _ProductMetrics:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Active catalog taxonomy entries (not vendor listings).
+        active_listings:
+          type: integer
+          description: VendorProduct rows with status=active.
+        out_of_stock_listings:
+          type: integer
+      required:
+      - active_listings
+      - out_of_stock_listings
+      - total
+    _SearchVendor:
+      type: object
+      properties:
+        handle:
+          type: string
+        vendor_id:
+          type: string
+        shop_name:
+          type: string
+        is_open:
+          type: boolean
+        verified:
+          type: boolean
+          readOnly: true
+        delivery_enabled:
+          type: boolean
+          readOnly: true
+        lat:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+      required:
+      - delivery_enabled
+      - handle
+      - is_open
+      - lat
+      - lng
+      - shop_name
+      - vendor_id
+      - verified
+    _UserMetrics:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: All accounts, any time.
+        new:
+          type: integer
+          description: date_joined within the selected period.
+        active:
+          type: integer
+          description: last_login within the selected period.
+      required:
+      - active
+      - new
+      - total
+    _VendorMetrics:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: All shops, any time (not period-scoped).
+        pending_verification:
+          type: integer
+        active:
+          type: integer
+        suspended:
+          type: integer
+      required:
+      - active
+      - pending_verification
+      - suspended
+      - total
   securitySchemes:
     jwtAuth:
       type: http

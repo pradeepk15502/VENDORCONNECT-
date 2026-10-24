@@ -40,10 +40,16 @@ Tables are named `<app>_<model>` (Django convention). Every mutable table has `c
 | payments | `orders_payment` | |
 | notifications | `notifications_notification`, `..._notificationpreference`, `..._pushsubscription` | |
 | reports | `moderation_report` | also disputes |
-| ai_detections | `ai_aidetection`, `ai_aimodelversion` | predictions JSON; `vendor_corrected` = training signal |
+| ai_detections | `ai_aidetection`, `ai_aimodelversion` | predictions JSON; `vendor_corrected` = training signal; `confirmed_listing` FK → `catalog_vendorproduct` once the vendor confirms (Phase 10 shipped against this unchanged Phase 0 schema — no migration was needed) |
 | — | `assets_mediaasset` | object-storage keys, variants; no blobs in DB |
 | — | `analytics_analyticsevent` | hashed actor, rounded coordinates |
 | — | `audit_auditlog` | append-only admin/vendor actions |
+
+Phase 11 (admin back-office) shipped against this schema almost entirely unchanged — `verification_status`/`verified_at` on
+`vendors_vendor`, `VendorVerification`, and `is_active`/`suspended_at`/`suspension_reason` on `accounts_user` already existed
+but were unwired until now. The one real migration it added is a new Django permission, `accounts.manage_users` (on `User.Meta`,
+alongside the pre-existing `vendors.verify_vendor`/`vendors.suspend_vendor`) — no new table. See `docs/ARCHITECTURE.md` D32 for
+the full audit behind this, including why Settings/category-CRUD were deliberately not given tables that don't exist yet.
 
 ## Key relationships
 
@@ -57,6 +63,7 @@ User 1─1 Cart 1─* CartItem *─1 VendorProduct
 Order *─1 Vendor, *─1 User; Order 1─* OrderItem / OrderStatusEvent / Payment
 Vendor 1─* Post 1─* PostMedia;  User *─* Vendor via Follow;  Review *─1 Vendor, *─1 User, 0..1 Order
 Chat (User, Vendor) 1─* Message
+AIDetection *─1 Vendor, *─1 MediaAsset, 0..1─* VendorProduct (confirmed_listing)
 ```
 
 ## Business rules enforced in the database (not only in code)
@@ -64,8 +71,12 @@ Chat (User, Vendor) 1─* Message
 - Vendor handle unique case-insensitively (`vendor_handle_ci_unique`).
 - One active listing per (vendor, product, variety, unit) (`uniq_active_listing`, partial).
 - Price ≥ 0; cart quantity > 0; rating 1–5; delivery radius range; pickup-or-delivery.
-- One default address per user; one general review per (vendor, author).
-- Inventory mutations idempotent (`uniq_inventory_mutation`).
+- One default address per user; one general review per (vendor, author); one review per completed
+  order (`uniq_review_per_order`, Phase 9 — closes a race between two concurrent submits, not just
+  a view-level pre-check).
+- Inventory mutations idempotent (`uniq_inventory_mutation`); cart checkout idempotent per customer
+  (`Order.idempotency_key`).
+- One like per (post, user) (`uniq_post_like`); one follow per (user, vendor) (`uniq_follow`).
 
 ## Indexes that matter for the core loop
 

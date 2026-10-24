@@ -3,12 +3,14 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev:customer": "npm run dev -w @vc/customer",
-    "dev:vendor": "npm run dev -w @vc/vendor",
+    "dev:web": "npm run dev -w @vc/web",
     "dev:admin": "npm run dev -w @vc/admin",
-    "build": "npm run build -w @vc/customer -w @vc/vendor -w @vc/admin",
+    "build": "npm run build -w @vc/web -w @vc/admin",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "test": "vitest run",
@@ -17,10 +19,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
-    "@playwright/test": "^1.50.0",
+    "@playwright/test": "1.56.1",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.0",
+    "@types/leaflet": "^1.9.22",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",

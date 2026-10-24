@@ -10,17 +10,9 @@
       "presentation": { "panel": "dedicated", "group": "vc" }
     },
     {
-      "label": "Web: customer app (5173)",
+      "label": "Web: app (5173)",
       "type": "shell",
-      "command": "npm run dev:customer",
-      "isBackground": true,
-      "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activelyMatches": true, "beginsPattern": ".", "endsPattern": "Local:" } },
-      "presentation": { "panel": "dedicated", "group": "vc" }
-    },
-    {
-      "label": "Web: vendor app (5174)",
-      "type": "shell",
-      "command": "npm run dev:vendor",
+      "command": "npm run dev:web",
       "isBackground": true,
       "problemMatcher": { "pattern": { "regexp": "^x^" }, "background": { "activelyMatches": true, "beginsPattern": ".", "endsPattern": "Local:" } },
       "presentation": { "panel": "dedicated", "group": "vc" }
@@ -35,7 +27,7 @@
     },
     {
       "label": "VendorConnect: start everything",
-      "dependsOn": ["Backend: start (Docker: db + redis + api)", "Web: customer app (5173)", "Web: vendor app (5174)", "Web: admin app (5175)"],
+      "dependsOn": ["Backend: start (Docker: db + redis + api)", "Web: app (5173)", "Web: admin app (5175)"],
       "dependsOrder": "parallel",
       "problemMatcher": []
     },

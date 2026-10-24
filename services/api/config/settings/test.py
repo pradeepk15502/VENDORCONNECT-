@@ -1,6 +1,11 @@
+import tempfile
+
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
+# Isolated per test-process directory — never the repo's real `media/` (base.py's default), and
+# nothing to clean up: it's under the OS temp dir, same spirit as pytest-django's throwaway test DB.
+MEDIA_ROOT = tempfile.mkdtemp(prefix="vc-test-media-")
 OTP_DEV_ECHO = True
 REFRESH_COOKIE_SECURE = False
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

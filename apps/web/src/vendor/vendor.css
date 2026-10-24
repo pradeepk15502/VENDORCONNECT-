@@ -1,0 +1,78 @@
+.v-hero { display: grid; place-items: center; height: 240px; border-radius: 24px; background: var(--vc-green-50); color: var(--vc-green-600); }
+.v-progress { height: 8px; border-radius: 4px; background: var(--vc-line); overflow: hidden; }
+.v-progress > span { display: block; height: 100%; background: var(--vc-green-600); transition: width 0.2s ease; }
+.v-idcard {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: var(--vc-s2);
+  padding: var(--vc-s6) var(--vc-s4); border-radius: 24px; text-align: center; color: #fff;
+  background: linear-gradient(160deg, var(--vc-green-600) 0%, var(--vc-green-700) 100%);
+  animation: v-idcard-in 0.4s ease both;
+}
+.v-idcard::before, .v-idcard::after { content: ""; position: absolute; border-radius: 50%; background: rgb(255 255 255 / 12%); }
+.v-idcard::before { width: 160px; height: 160px; top: -60px; left: -50px; }
+.v-idcard::after { width: 120px; height: 120px; bottom: -55px; right: -40px; background: var(--vc-orange-500); opacity: 0.35; }
+.v-idcard__mark {
+  position: relative; display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%;
+  background: rgb(255 255 255 / 16%); border: 1px solid rgb(255 255 255 / 35%);
+}
+.v-idcard__star {
+  position: absolute; top: -6px; right: -6px; display: grid; place-items: center; width: 30px; height: 30px;
+  border-radius: 50%; background: var(--vc-orange-500); color: #1f1300;
+}
+.v-idcard__id { position: relative; font-size: 2.25rem; font-weight: 850; letter-spacing: 0.04em; }
+@keyframes v-idcard-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .v-idcard { animation: none; } }
+.v-stat { display: flex; flex-direction: column; gap: 2px; padding: var(--vc-s3); border-radius: var(--vc-radius-sm); background: var(--vc-surface); box-shadow: var(--vc-shadow); }
+.v-stat svg { color: var(--vc-green-600); margin-bottom: 2px; }
+.v-stat b { font-size: var(--vc-text-xl); }
+.v-stat span { color: var(--vc-ink-3); font-size: var(--vc-text-sm); font-weight: 600; }
+.v-head { display: flex; align-items: center; gap: var(--vc-s3); padding-top: var(--vc-s4); }
+.v-head__avatar { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--vc-green-100); color: var(--vc-green-700); flex: none; }
+/* min-width: 0 — the shop name is arbitrary vendor-entered text; without this, this flex item (and
+ * its siblings: the verified badge, the notification bell) won't shrink below its content's
+ * min-content width, pushing the header — and the whole page — wider than the viewport (same bug
+ * class as .v-pform__row2 / .vc-bottomnav / .vc-appbar, fixed nearby). The shop name itself also
+ * truncates rather than wrapping/overflowing for the same reason. */
+.v-head__text { flex: 1; min-width: 0; }
+.v-head__text h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-head__greeting { margin: 0; color: var(--vc-ink-3); font-size: var(--vc-text-sm); font-weight: 600; }
+.v-head__id { font-weight: 700; color: var(--vc-green-700); }
+/* value column is minmax(0, 1fr), not a plain 1fr — shop address/etc. are arbitrary vendor-entered
+ * text and could otherwise force this wider than the viewport (see the vendor.css note above). */
+.v-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--vc-s2) var(--vc-s4); margin: 0; }
+.v-kv dt { color: var(--vc-ink-3); font-weight: 600; }
+.v-kv dd { margin: 0; overflow-wrap: break-word; }
+
+/* Vendor product list (Phase 4) */
+.v-plist__filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+.v-plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--vc-s2); }
+.v-prow { display: flex; align-items: stretch; gap: var(--vc-s2); border-radius: var(--vc-radius); background: var(--vc-surface); box-shadow: var(--vc-shadow); overflow: hidden; }
+.v-prow__main { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--vc-s4); border: 0; background: none; text-align: left; cursor: pointer; }
+.v-prow__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--vc-s3); }
+.v-prow__name { font-weight: 700; font-size: var(--vc-text-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-prow__price { flex: none; font-weight: 700; white-space: nowrap; }
+.v-prow__meta { display: flex; flex-wrap: wrap; gap: 6px; min-height: 1em; }
+.v-prow__paused { background: var(--vc-line); color: var(--vc-ink-3); }
+.v-prow__avail { flex: none; display: flex; align-items: center; padding: 0 var(--vc-s3); border: 0; border-inline-start: 1px solid var(--vc-line); background: none; cursor: pointer; }
+.v-prow__avail:disabled { opacity: 0.6; cursor: default; }
+
+/* Vendor product form (Phase 4). row2's columns use minmax(0,1fr), not a plain 1fr — a plain 1fr
+ * track has an implicit min-width:auto, so it won't shrink below its content's min-content size
+ * (the MRP field's hint text, the number inputs), which forced the grid — and the whole page —
+ * wider than the viewport on narrow screens (same fix already applied via .vc-grid-2/.vc-grid-3
+ * in packages/ui/src/components.css; this local class had just missed the same treatment). */
+.v-pform__unit-row { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+
+/* AI scan / confirm (Phase 10) */
+.v-scan__hero { display: grid; place-items: center; height: 140px; border-radius: 24px; background: var(--vc-green-50); color: var(--vc-green-600); }
+.v-scan__intro { color: var(--vc-ink-3); text-align: center; }
+.v-scan__busy { display: flex; flex-direction: column; align-items: center; gap: var(--vc-s3); padding: var(--vc-s6) 0; color: var(--vc-ink-3); }
+.v-scanr__preview { width: 100%; max-height: 260px; object-fit: cover; border-radius: var(--vc-radius); background: var(--vc-line); }
+.v-scanr__match { display: flex; flex-wrap: wrap; align-items: center; gap: var(--vc-s2); }
+.v-scanr__band { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: var(--vc-text-sm); }
+.v-scanr__band--likely { background: var(--vc-green-100); color: var(--vc-green-700); }
+.v-scanr__band--possible { background: #fff3d6; color: #8a5a00; }
+.v-scanr__source { color: var(--vc-ink-3); font-size: var(--vc-text-sm); }
+.v-scanr__confidence { flex-basis: 100%; margin: 0; color: var(--vc-ink-3); font-size: var(--vc-text-sm); }
+.v-scanr__dev { margin: 0; color: var(--vc-ink-3); font-size: var(--vc-text-sm); font-style: italic; }
+.v-pform__row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--vc-s3); }

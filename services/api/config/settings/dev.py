@@ -7,6 +7,6 @@ REFRESH_COOKIE_SECURE = env.bool("REFRESH_COOKIE_SECURE", default=False)
 REFRESH_COOKIE_SAMESITE = env("REFRESH_COOKIE_SAMESITE", default="Lax")
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
-    default=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],
+    default=["http://localhost:5173", "http://localhost:5175"],  # web app, admin app
 )
 LOGGING["handlers"]["default"]["formatter"] = env("LOG_FORMAT", default="console")  # noqa: F405

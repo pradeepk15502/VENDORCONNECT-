@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars (gitignored) and fill in real values.
+
+domain_name = "example.com" # same apex as production — staging gets its own staging-* subdomains
+github_org  = "your-github-org-or-username"
+github_repo = "vendorconnect"
+
+# Use the SMS provider's sandbox/test credentials here, never production ones (AWS audit doc,
+# "Environment separation"). msg91/twilio are unimplemented stubs as of Phase 13 — see
+# docs/DEPLOYMENT.md known limitations.
+sms_provider = "msg91"
+
+container_image = "REPLACE_ME.dkr.ecr.ap-south-1.amazonaws.com/vendorconnect/api:bootstrap"
+
+alert_email = ""

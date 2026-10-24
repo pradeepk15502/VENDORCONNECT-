@@ -1,10 +1,11 @@
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from vc.catalog.models import Category
-from vc.core.geo import make_point
+from vc.core.geo import INDIA_BOUNDS, make_point
 
 from .models import DeliverySettings, Vendor, VendorLocation, VendorProfile
 
@@ -106,6 +107,7 @@ class VendorPublicSerializer(serializers.ModelSerializer):
     location = serializers.SerializerMethodField()
     delivery = DeliverySerializer(read_only=True)
     bio = serializers.CharField(source="profile.bio", default="")
+    is_following = serializers.SerializerMethodField()
 
     class Meta:
         model = Vendor
@@ -121,6 +123,7 @@ class VendorPublicSerializer(serializers.ModelSerializer):
             "rating_avg",
             "rating_count",
             "follower_count",
+            "is_following",
             "location",
             "delivery",
             "bio",
@@ -129,6 +132,22 @@ class VendorPublicSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField())
     def get_verified(self, obj):
         return obj.verification_status == Vendor.VERIFY_VERIFIED
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_following(self, obj) -> bool:
+        """Phase 9 (ARCHITECTURE D30). The caller precomputes a `following_ids` set in one bulk
+        query and passes it via context — never a per-row query here (master prompt §46: avoid
+        N+1 queries on a list of up to `page_size` vendors). Defaults to a single-object fallback
+        query only where a view genuinely has just the one vendor and skipped that step."""
+        following_ids = self.context.get("following_ids")
+        if following_ids is not None:
+            return obj.id in following_ids
+        request = self.context.get("request")
+        if request is not None and request.user.is_authenticated:
+            from vc.social.models import Follow
+
+            return Follow.objects.filter(user=request.user, vendor_id=obj.id).exists()
+        return False
 
     @extend_schema_field(LocationOutSerializer(allow_null=True))
     def get_location(self, obj):
@@ -151,6 +170,40 @@ class VendorOwnerSerializer(VendorPublicSerializer):
         fields = VendorPublicSerializer.Meta.fields + ["status", "verification_status", "onboarding_step", "created_at"]
 
 
+class VendorListQuerySerializer(serializers.Serializer):
+    """Query params for GET /vendors (nearby list — Phase 3). `lat`/`lng` are the customer's
+    current position, sent per request and never stored (ARCHITECTURE D11), same as /search."""
+
+    lat = serializers.FloatField(min_value=INDIA_BOUNDS["lat"][0], max_value=INDIA_BOUNDS["lat"][1])
+    lng = serializers.FloatField(min_value=INDIA_BOUNDS["lng"][0], max_value=INDIA_BOUNDS["lng"][1])
+    category = serializers.SlugField(required=False, allow_blank=True, default="")
+    radius_km = serializers.FloatField(required=False, min_value=0.5, max_value=settings.SEARCH_RADIUS_KM_MAX)
+    # Phase 6 filters (ARCHITECTURE D26) — opt-in, off by default; omitting them keeps the existing
+    # "closed shops shown, ranked lower" default (D9) unchanged.
+    open_now = serializers.BooleanField(required=False, default=False)
+    delivery = serializers.BooleanField(required=False, default=False)
+    pickup = serializers.BooleanField(required=False, default=False)
+
+    def validate_category(self, value):
+        if value and not Category.objects.filter(slug=value, is_active=True).exists():
+            raise serializers.ValidationError("Unknown category.")
+        return value
+
+
+class VendorListSerializer(VendorPublicSerializer):
+    """A vendor card for browsing (Home 'Shops near you', the Vendors tab) — the public shape
+    plus distance, from a queryset annotated with `.annotate(distance=Distance(...))`."""
+
+    distance_km = serializers.SerializerMethodField()
+
+    class Meta(VendorPublicSerializer.Meta):
+        fields = VendorPublicSerializer.Meta.fields + ["distance_km"]
+
+    @extend_schema_field(serializers.FloatField())
+    def get_distance_km(self, obj) -> float:
+        return round(obj.distance.km, 2)
+
+
 class VendorUpdateSerializer(serializers.ModelSerializer):
     bio = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
@@ -166,6 +219,19 @@ class VendorUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
+class VendorSummarySerializer(serializers.Serializer):
+    """GET /vendors/me/summary (Phase 5) — the vendor dashboard's stat tiles, computed for real
+    from the vendor's own listings in one aggregate query (ARCHITECTURE D25). No orders/sales
+    fields here: those need the order system (Phase 8) and showing a fake 0 until then would be
+    exactly the fabricated data the project brief forbids — the dashboard omits those tiles."""
+
+    is_open = serializers.BooleanField()
+    status_changed_at = serializers.DateTimeField(allow_null=True)
+    product_count = serializers.IntegerField()
+    low_stock_count = serializers.IntegerField()
+    out_of_stock_count = serializers.IntegerField()
+
+
 class ShopStatusSerializer(serializers.Serializer):
     is_open = serializers.BooleanField()
 
@@ -175,3 +241,110 @@ class ShopStatusSerializer(serializers.Serializer):
             vendor.status_changed_at = timezone.now()
             vendor.save(update_fields=["is_open", "status_changed_at", "updated_at"])
         return vendor
+
+
+# --- Admin (Phase 11, ARCHITECTURE D32) ----------------------------------------------------------
+
+
+class _AdminOwnerRefSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    phone = serializers.CharField()
+
+
+class AdminVendorListSerializer(serializers.ModelSerializer):
+    owner = _AdminOwnerRefSerializer(read_only=True)
+    categories = serializers.SlugRelatedField(many=True, read_only=True, slug_field="slug")
+    city = serializers.CharField(source="location.city", default="")
+
+    class Meta:
+        model = Vendor
+        fields = [
+            "handle",
+            "shop_name",
+            "owner",
+            "status",
+            "verification_status",
+            "city",
+            "categories",
+            "is_open",
+            "rating_avg",
+            "rating_count",
+            "follower_count",
+            "created_at",
+        ]
+
+
+class AdminVendorDetailSerializer(AdminVendorListSerializer):
+    location = serializers.SerializerMethodField()
+    hours = serializers.SerializerMethodField()
+    delivery = DeliverySerializer(read_only=True)
+    product_count = serializers.SerializerMethodField()
+    post_count = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
+    order_count = serializers.SerializerMethodField()
+
+    class Meta(AdminVendorListSerializer.Meta):
+        fields = AdminVendorListSerializer.Meta.fields + [
+            "public_phone",
+            "location",
+            "hours",
+            "delivery",
+            "product_count",
+            "post_count",
+            "review_count",
+            "order_count",
+            "verified_at",
+            "status_changed_at",
+        ]
+
+    @extend_schema_field(LocationOutSerializer(allow_null=True))
+    def get_location(self, obj):
+        loc = getattr(obj, "location", None)
+        if loc is None:
+            return None
+        return {
+            "lat": round(loc.point.y, 6),
+            "lng": round(loc.point.x, 6),
+            "address_line": loc.address_line,
+            "landmark": loc.landmark,
+            "locality": loc.locality,
+            "city": loc.city,
+            "pincode": loc.pincode,
+        }
+
+    @extend_schema_field(
+        serializers.ListField(child=serializers.DictField()),
+    )
+    def get_hours(self, obj):
+        return [
+            {"weekday": h.weekday, "opens_at": h.opens_at.isoformat(), "closes_at": h.closes_at.isoformat()}
+            for h in obj.hours.all()
+        ]
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_product_count(self, obj) -> int:
+        from vc.catalog.models import VendorProduct
+
+        return obj.listings.exclude(status=VendorProduct.STATUS_DELETED).count()
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_post_count(self, obj) -> int:
+        return obj.posts.count()
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_review_count(self, obj) -> int:
+        return obj.reviews.count()
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_order_count(self, obj) -> int:
+        return obj.orders.count()
+
+
+class AdminVendorVerifyDecisionSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=[Vendor.VERIFY_VERIFIED, Vendor.VERIFY_REJECTED])
+    notes = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+
+class AdminVendorSuspendSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=300)

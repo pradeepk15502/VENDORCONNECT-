@@ -45,6 +45,10 @@ const P: Record<string, string> = {
   shoe: "M3 17V8h5l2 3 5 1.5c3 .8 6 2 6 4.5v1H3Zm0 0h18",
   plug: "M9 3v5m6-5v5M6 8h12v3a6 6 0 0 1-12 0V8Zm6 9v4",
   pencil: "M4 20l1-4L16 5l3 3L8 19l-4 1Zm10-13 3 3",
+  trash: "M5 7h14M9 7V4h6v3m-9 0 1 13h10l1-13M10 11v6m4-6v6",
+  filter: "M4 5h16l-6.5 8v6l-3 1.5V13L4 5Z",
+  map: "M4 6l5-2 6 2 5-2v14l-5 2-6-2-5 2V6Zm5-2v14m6-12v14",
+  send: "M3 20l18-8L3 4v6l12 2-12 2v6Z",
 };
 
 export type IconName = keyof typeof P;

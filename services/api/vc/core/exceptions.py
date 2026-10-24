@@ -3,11 +3,15 @@
 {"error": {"code": "validation_error", "message": "...", "details": {...}}}
 """
 
+import structlog
 from django.core.exceptions import PermissionDenied
-from django.http import Http404
+from django.http import Http404, JsonResponse
+from django.views.defaults import server_error as django_server_error
 from rest_framework import exceptions, status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
+
+log = structlog.get_logger("vc.errors")
 
 
 class DomainError(exceptions.APIException):
@@ -70,3 +74,25 @@ def exception_handler(exc, context):
 
 def _headers(response):
     return {k: v for k, v in response.items() if k in ("Retry-After", "WWW-Authenticate", "Allow")}
+
+
+def handler500(request, *args, **kwargs):
+    """Phase 12 hardening: a genuinely unhandled exception (a real bug, not an `APIException`) used
+    to fall all the way through to Django's own default error page — plain HTML, not this project's
+    `{"error": {...}}` envelope every other response uses, which breaks API clients that always
+    parse JSON. Django only calls this when `DEBUG=False` (`django-admin/` keeps Django's own page;
+    every `/api/v1/*` response gets the same envelope as a handled `DomainError`/`ValidationError`).
+    The real exception is logged server-side (never in the response body) via `log.exception`, which
+    pulls the current exception from `sys.exc_info()` — Django invokes this from inside the except
+    block, so it's still available here."""
+    if not request.path.startswith("/api/"):
+        return django_server_error(request)
+    log.exception("unhandled_exception", path=request.path, request_id=getattr(request, "request_id", None))
+    body = {
+        "error": {
+            "code": "server_error",
+            "message": "Something went wrong on our end. Please try again.",
+            "details": {},
+        }
+    }
+    return JsonResponse(body, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

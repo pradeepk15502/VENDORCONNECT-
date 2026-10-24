@@ -25,3 +25,4 @@ class Report(TimeStampedModel):
 
     class Meta:
         indexes = [models.Index(fields=["target_type", "target_id"])]
+        permissions = [("handle_report", "Can resolve/dismiss user reports (admin moderation)")]

@@ -32,9 +32,26 @@ class Order(TimeStampedModel):
     PICKUP, DELIVERY = "pickup", "delivery"
     S_PLACED, S_ACCEPTED, S_REJECTED, S_PREPARING, S_READY = "placed", "accepted", "rejected", "preparing", "ready"
     S_OUT, S_DELIVERED, S_PICKED_UP, S_CANCELLED = "out_for_delivery", "delivered", "picked_up", "cancelled"
+    # Added in Phase 8 (ARCHITECTURE D29): the master prompt's tracking timeline and vendor "Completed
+    # orders" tab both need a terminal state distinct from picked_up/delivered — "the handover
+    # happened" vs. "the order is done and archived" (e.g. cash actually collected, or a short window
+    # for a same-day dispute) are different facts even though most orders reach one right after the
+    # other.
+    S_COMPLETED = "completed"
     STATUS_CHOICES = [
         (s, s.replace("_", " ").title())
-        for s in [S_PLACED, S_ACCEPTED, S_REJECTED, S_PREPARING, S_READY, S_OUT, S_DELIVERED, S_PICKED_UP, S_CANCELLED]
+        for s in [
+            S_PLACED,
+            S_ACCEPTED,
+            S_REJECTED,
+            S_PREPARING,
+            S_READY,
+            S_OUT,
+            S_DELIVERED,
+            S_PICKED_UP,
+            S_COMPLETED,
+            S_CANCELLED,
+        ]
     ]
 
     number = models.CharField(max_length=20, unique=True, help_text="human-friendly, e.g. VC-24X7K9")
@@ -49,11 +66,24 @@ class Order(TimeStampedModel):
     total = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=12, default="cash", help_text="cash | upi | online")
     rejection_reason = models.CharField(max_length=200, blank=True)
+    idempotency_key = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="client-generated, one per checkout attempt (Phase 8, ARCHITECTURE D29) — "
+        "a retry with the same key returns the existing order instead of creating a second one",
+    )
 
     class Meta:
         indexes = [
             models.Index(fields=["vendor", "status", "-created_at"]),
             models.Index(fields=["customer", "-created_at"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "idempotency_key"],
+                condition=~models.Q(idempotency_key=""),
+                name="uniq_order_idempotency_key",
+            )
         ]
 
 

@@ -3,3 +3,9 @@ __pycache__
 *.pyc
 .pytest_cache
 staticfiles
+# Phase 12 hardening: both Dockerfile stages COPY the whole build context (`COPY . .`) after already
+# `pip install`-ing into the image's own site-packages — without these, the host's local dev tooling
+# (a 200MB+ virtualenv; ruff's cache) got copied into the image too, on top of the real dependencies,
+# for zero runtime benefit.
+.venv
+.ruff_cache

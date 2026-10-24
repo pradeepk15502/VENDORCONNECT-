@@ -1,5 +1,5 @@
 Django==5.2.*
-djangorestframework==3.17.*
+djangorestframework==3.18.*
 djangorestframework-simplejwt==5.5.*
 django-cors-headers==4.*
 django-filter==25.*
@@ -7,8 +7,16 @@ drf-spectacular==0.28.*
 psycopg[binary]==3.2.*
 django-environ==0.12.*
 gunicorn==23.*
-Pillow==12.*
+Pillow==13.*
 argon2-cffi==25.*
 structlog==25.*
 redis==5.*
 django-redis==5.*
+# Phase 10 — AI product detection: both are real, local computer-vision capabilities (no network
+# call, no API key). System libraries (tesseract-ocr, libzbar) must be present on the host/image;
+# see docs/AI.md for exactly what these can and can't do.
+pytesseract==0.3.*
+pyzbar==0.1.*
+# Phase 13 — S3 media backend (vc/assets/storage.py). Auth is via boto3's default credential chain
+# (the ECS task role in AWS), never a static key pair read from Django settings.
+boto3==1.*

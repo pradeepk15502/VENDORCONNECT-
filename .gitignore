@@ -5,8 +5,23 @@ dist/
 __pycache__/
 *.pyc
 .pytest_cache/
+.ruff_cache/
+.venv/
 staticfiles/
 tests/e2e/report/
 tests/e2e/.logs/
 test-results/
 .coverage
+dump.rdb
+services/api/media/
+
+# Terraform (infrastructure/aws) — state, plans, provider caches, and the per-environment files
+# that hold or point at real account details never belong in git. `.terraform.lock.hcl` is NOT
+# ignored — commit it, it pins provider versions for reproducible applies.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+**/backend.hcl
+**/terraform.tfvars
+**/*.auto.tfvars

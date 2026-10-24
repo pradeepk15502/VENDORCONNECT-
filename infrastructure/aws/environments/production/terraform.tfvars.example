@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars (gitignored) and fill in real values. Nothing here is a secret — actual
+# secrets are generated inside Terraform (modules/secrets) or managed by RDS itself, never typed
+# into a tfvars file.
+
+domain_name = "example.com" # the real domain, chosen at implementation time — see docs/DEPLOYMENT.md
+github_org  = "your-github-org-or-username"
+github_repo = "vendorconnect"
+
+# msg91/twilio are unimplemented stubs as of Phase 13 (services/api/vc/accounts/sms.py) — do not set
+# this to anything but a provider you have actually finished implementing, or OTP login will 500 in
+# production. See docs/DEPLOYMENT.md known limitations.
+sms_provider = "msg91"
+
+# The very first apply needs *some* image in ECR to point the task definition at. Push a bootstrap
+# build (or the `dev` target) to the api ECR repo first, then set this to that URI. Every deploy
+# after that is done by CI/CD, not by editing this value (modules/ecs's `ignore_changes`).
+container_image = "REPLACE_ME.dkr.ecr.ap-south-1.amazonaws.com/vendorconnect/api:bootstrap"
+
+alert_email = "" # optional — set to receive CloudWatch alarm emails (requires confirming the SNS subscription)

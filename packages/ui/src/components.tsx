@@ -50,7 +50,7 @@ export function Card({ children, className, as: As = "div", ...rest }: { childre
 /* ---------- Status badges: icon + word + colour, never colour alone ---------- */
 export type StatusKind =
   | "open" | "closed" | "in_stock" | "low_stock" | "out_of_stock"
-  | "stale" | "delivery" | "pickup_only" | "pickup" | "no_delivery" | "verified" | "unverified";
+  | "stale" | "delivery" | "pickup_only" | "pickup" | "no_delivery" | "verified" | "unverified" | "info";
 
 const STATUS_STYLE: Record<StatusKind, { tone: string; icon: IconName }> = {
   open: { tone: "open", icon: "check" },
@@ -65,6 +65,9 @@ const STATUS_STYLE: Record<StatusKind, { tone: string; icon: IconName }> = {
   pickup_only: { tone: "stale", icon: "bag" },
   verified: { tone: "open", icon: "shield" },
   unverified: { tone: "stale", icon: "shield" },
+  // Generic neutral badge — the vendor-post-kind label (Phase 9: "New Stock"/"Offer"/"Update"/...),
+  // where the icon+colour pair is intentionally the same across kinds and only the text differs.
+  info: { tone: "info", icon: "globe" },
 };
 
 export function StatusBadge({ kind, label, size = "md" }: { kind: StatusKind; label: string; size?: "sm" | "md" | "lg" }) {
@@ -206,6 +209,34 @@ export function Chip({ selected, onClick, icon, children }: { selected?: boolean
   );
 }
 
+/* ---------- Settings-style list row (shop settings, account menus) ---------- */
+export function ListRow({
+  icon,
+  label,
+  hint,
+  onClick,
+  disabled,
+  trailing,
+}: {
+  icon: IconName;
+  label: string;
+  hint?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  trailing?: ReactNode;
+}) {
+  return (
+    <button type="button" className={cx("vc-listrow", disabled && "is-disabled")} onClick={onClick} disabled={disabled}>
+      <span className="vc-listrow__icon"><Icon name={icon} size={22} /></span>
+      <span className="vc-listrow__text">
+        <span className="vc-listrow__label">{label}</span>
+        {hint ? <span className="vc-listrow__hint">{hint}</span> : null}
+      </span>
+      {trailing ?? <Icon name="chevron" size={20} className="vc-listrow__chevron" />}
+    </button>
+  );
+}
+
 export function Tile({ icon, label, onClick, tone = "green" }: { icon: IconName; label: string; onClick?: () => void; tone?: "green" | "orange" }) {
   return (
     <button type="button" className={cx("vc-tile", `vc-tile--${tone}`)} onClick={onClick}>
@@ -243,7 +274,10 @@ export function EmptyState({ icon = "box", title, message, action }: { icon?: Ic
   return (
     <div className="vc-state">
       <span className="vc-state__icon"><Icon name={icon} size={40} /></span>
-      <p className="vc-state__title">{title}</p>
+      {/* h2, not p — the AppBar above already owns the page's h1, and a real heading (not just
+       * heading-styled text) lets screen-reader users jump straight to "no results" state via
+       * heading navigation instead of reading the whole screen. */}
+      <h2 className="vc-state__title">{title}</h2>
       {message ? <p className="vc-state__msg">{message}</p> : null}
       {action}
     </div>
@@ -254,7 +288,7 @@ export function ErrorState({ title, message, onRetry, retryLabel = "Try again", 
   return (
     <div className="vc-state vc-state--error" role="alert">
       <span className="vc-state__icon"><Icon name={icon} size={40} /></span>
-      <p className="vc-state__title">{title}</p>
+      <h2 className="vc-state__title">{title}</h2>
       {message ? <p className="vc-state__msg">{message}</p> : null}
       {onRetry ? <Button variant="secondary" icon="refresh" onClick={onRetry}>{retryLabel}</Button> : null}
     </div>

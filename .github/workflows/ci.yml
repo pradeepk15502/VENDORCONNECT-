@@ -40,6 +40,15 @@ jobs:
       - run: npm run typecheck:tests
       - run: npm test
       - run: npm run build
+      # Neither app takes a build-time API URL (packages/api-client's baseUrl is the relative
+      # "/api/v1", proxied same-origin — AWS audit doc, "Web + admin deployment model"), so this one
+      # build is deploy-target-agnostic: the same dist/ is synced to staging and, after approval,
+      # promoted verbatim to production in deploy-production, with no rebuild (Phase 13 prompt §13's
+      # "build once" principle applied to the frontends too, not just the API image).
+      - uses: actions/upload-artifact@v4
+        with: { name: web-dist, path: apps/web/dist, retention-days: 7 }
+      - uses: actions/upload-artifact@v4
+        with: { name: admin-dist, path: apps/admin/dist, retention-days: 7 }
       - run: npm audit --omit=dev --audit-level=high
 
   e2e:
@@ -67,41 +76,288 @@ jobs:
         if: failure()
         with: { name: e2e-report, path: tests/e2e/report }
 
-  docker:
+  ai-runtime-smoke-test:
+    # Proves the *built container image* — not this job's own pip-installed venv — actually has the
+    # OS-level tesseract/libzbar runtime vc/ai depends on (a Dockerfile with the right Python
+    # packages but wrong/missing system packages would pass every pytest and still 500 on every real
+    # request). Runs on every push/PR (not gated to main like `docker` below) since it only needs to
+    # build the `dev` target locally (`load: true` — no registry push/pull), so it isn't blocked by
+    # this repo's own image-name/push permissions and gives earlier signal than a main-only job would.
     needs: [e2e]
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    permissions: { contents: read, packages: write }
-    strategy:
-      matrix:
-        include:
-          - { name: api, context: services/api, file: services/api/Dockerfile, target: prod, args: "" }
-          - { name: customer, context: ., file: infrastructure/docker/web.Dockerfile, target: "", args: "APP=customer" }
-          - { name: vendor, context: ., file: infrastructure/docker/web.Dockerfile, target: "", args: "APP=vendor" }
-          - { name: admin, context: ., file: infrastructure/docker/web.Dockerfile, target: "", args: "APP=admin" }
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env: { POSTGRES_USER: vc, POSTGRES_PASSWORD: vc_dev_pw, POSTGRES_DB: vendorconnect }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U vc" --health-interval 5s --health-retries 10
+      redis: { image: "redis:7-alpine", ports: ["6379:6379"] }
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/build-push-action@v6
+        with: { context: services/api, file: services/api/Dockerfile, target: dev, load: true, tags: vc-api:smoke-test }
+      # dev target shares the Dockerfile's `base` stage (and so its tesseract/libzbar OS deps) with
+      # `prod` — it only differs in dev-only OTP echo, which this smoke test's login step needs and
+      # prod correctly refuses to provide (see docs/AI.md).
+      - name: Run the built image
+        run: |
+          docker run -d --name vc-api --network host \
+            -e DJANGO_SETTINGS_MODULE=config.settings.dev \
+            -e DATABASE_URL=postgis://vc:vc_dev_pw@localhost:5432/vendorconnect \
+            -e REDIS_URL=redis://localhost:6379/0 \
+            -e DJANGO_SECRET_KEY=ci-smoke-test-only-not-a-real-secret \
+            -e DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1 \
+            -e OTP_DEV_ECHO=true -e SMS_PROVIDER=console \
+            vc-api:smoke-test
+          docker exec vc-api python manage.py migrate -v0
+          docker exec vc-api python manage.py seed_taxonomy -v0
+          # One-time test setup, not app behaviour: the seeded catalog has no real barcodes (a real
+          # deployment wouldn't either, until a vendor's actual product has one) — give the seeded
+          # "tomato" product the exact barcode services/api/scripts/ai_smoke_fixtures/barcode-tomato.png
+          # encodes, so the smoke test's barcode-path check has a real match to find.
+          docker exec vc-api python manage.py shell -c "
+          from vc.catalog.models import Product
+          p = Product.objects.get(slug='tomato'); p.barcode = '4006381333931'; p.save(update_fields=['barcode'])"
+      - name: Wait for the container to report healthy
+        run: for i in $(seq 1 30); do curl -sf http://localhost:8000/health && exit 0; sleep 1; done; echo "never became healthy"; exit 1
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: AI runtime smoke test (real HTTP, real Tesseract, real pyzbar — nothing mocked)
+        run: python services/api/scripts/ai_smoke_test.py --base-url http://localhost:8000/api/v1
+      - if: always()
+        run: docker logs vc-api || true
+
+  docker:
+    # Pushes to ECR (infrastructure/aws/environments/shared) — one shared registry, not one per
+    # environment (AWS audit doc, "CI/CD readiness": "swap the registry target from ghcr.io to ECR").
+    # Builds once, tagged with the immutable commit SHA (ECR repos are image_tag_mutability=IMMUTABLE
+    # — Phase 13 prompt §9: "never `latest` as the only deploy identity" — this workflow never uses
+    # `latest` at all); deploy-staging and deploy-production both deploy this exact tag, never
+    # rebuilding, so what's tested in staging is byte-for-byte what reaches production.
+    needs: [e2e, ai-runtime-smoke-test]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    # Borrows the staging environment's OIDC deploy role purely to authenticate to ECR — the ECR
+    # repositories themselves are account-wide, not staging's (infrastructure/aws/README.md, "Why
+    # shared/ exists"), and every environment's deploy role has identical ECR push permissions
+    # scoped to the same shared repos (modules/iam). Using an environment here (rather than none)
+    # still means this job can only run with the vars/secrets an environment exposes — no bare
+    # long-lived credentials fall back into scope if the OIDC step is ever misconfigured.
+    environment: staging
+    permissions: { contents: read, id-token: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.file }}
-          target: ${{ matrix.target }}
-          build-args: ${{ matrix.args }}
+          context: services/api
+          file: services/api/Dockerfile
+          target: prod
           push: true
-          tags: ghcr.io/${{ github.repository }}/${{ matrix.name }}:${{ github.sha }}
+          tags: ${{ steps.ecr.outputs.registry }}/vendorconnect/api:${{ github.sha }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/web.Dockerfile
+          build-args: APP=web
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/vendorconnect/web:${{ github.sha }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/web.Dockerfile
+          build-args: APP=admin
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/vendorconnect/admin:${{ github.sha }}
+      # web/admin land in ECR too (Phase 13 prompt §9 — all three repos are real, CI-built images),
+      # but nothing deploys them from there: the AWS audit doc's "Web + admin deployment model"
+      # puts both SPAs in S3+CloudFront, not containers, so deploy-staging/deploy-production sync
+      # the web/admin *build output* (the `web` job's dist artifacts), not these images. They exist
+      # for parity with the documented self-hosted docker-compose deployment path, which does run
+      # them as containers (docker-compose.yml, infrastructure/docker/nginx-spa.conf).
 
   deploy-staging:
     needs: [docker]
     runs-on: ubuntu-24.04
     environment: staging
+    # actions:read is required by actions/download-artifact@v4 below (fetching the `web` job's
+    # dist/ artifacts) — specifying any `permissions:` block zeroes every unlisted scope, so it has
+    # to be listed explicitly rather than relying on a default.
+    permissions: { contents: read, id-token: write, actions: read }
     steps:
-      - run: echo "Deploy ghcr.io/${{ github.repository }}/*:${{ github.sha }} to staging — see docs/DEPLOYMENT.md (wired up in Phase 13)"
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # --- API: deterministic migrate-then-deploy (Phase 13 prompt §13) --------------------------
+      # Never runs migrations independently from every task, and never marks the deploy successful
+      # if they fail: build a task-definition revision pointing at the new image, run migrations as
+      # a one-off task from THAT revision, verify its exit code, and only then move the live service
+      # onto it. A migration failure exits non-zero here, which fails the job before update-service
+      # ever runs — the previous revision keeps serving traffic untouched.
+      - name: Register new task definition revision
+        run: |
+          set -euo pipefail
+          aws ecs describe-task-definition --task-definition "${{ vars.ECS_TASK_FAMILY }}" \
+            --query 'taskDefinition' > current-task-def.json
+          NEW_IMAGE="${{ steps.ecr.outputs.registry }}/vendorconnect/api:${{ github.sha }}"
+          jq --arg IMAGE "$NEW_IMAGE" \
+            '.containerDefinitions[0].image = $IMAGE
+             | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .deregisteredAt)' \
+            current-task-def.json > new-task-def.json
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> "$GITHUB_ENV"
+      - name: Run database migrations (one-off task, new revision)
+        run: |
+          set -euo pipefail
+          TASK_ARN=$(aws ecs run-task --cluster "${{ vars.ECS_CLUSTER }}" \
+            --task-definition "$NEW_TASK_DEF_ARN" --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ vars.PRIVATE_SUBNET_IDS }}],securityGroups=[${{ vars.ECS_SECURITY_GROUP_ID }}],assignPublicIp=DISABLED}" \
+            --overrides '{"containerOverrides":[{"name":"api","command":["python","manage.py","migrate","--noinput"]}]}' \
+            --query 'tasks[0].taskArn' --output text)
+          echo "Waiting for migration task $TASK_ARN to stop..."
+          aws ecs wait tasks-stopped --cluster "${{ vars.ECS_CLUSTER }}" --tasks "$TASK_ARN"
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "${{ vars.ECS_CLUSTER }}" --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+          STOPPED_REASON=$(aws ecs describe-tasks --cluster "${{ vars.ECS_CLUSTER }}" --tasks "$TASK_ARN" \
+            --query 'tasks[0].stoppedReason' --output text)
+          echo "Migration task stopped: exitCode=$EXIT_CODE reason=$STOPPED_REASON"
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "::error::Migration failed (exitCode=$EXIT_CODE, reason=$STOPPED_REASON) — refusing to deploy $NEW_TASK_DEF_ARN"
+            exit 1
+          fi
+      - name: Update service to the new revision and wait for stability
+        run: |
+          set -euo pipefail
+          aws ecs update-service --cluster "${{ vars.ECS_CLUSTER }}" --service "${{ vars.ECS_SERVICE }}" \
+            --task-definition "$NEW_TASK_DEF_ARN" --force-new-deployment > /dev/null
+          aws ecs wait services-stable --cluster "${{ vars.ECS_CLUSTER }}" --services "${{ vars.ECS_SERVICE }}"
+      - name: API smoke test (/health, /health/ready — real HTTP, direct to the ALB)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do curl -fsS "${{ vars.API_URL }}/health" && break; sleep 2; done
+          curl -fsS "${{ vars.API_URL }}/health"
+          curl -fsS "${{ vars.API_URL }}/health/ready"
+
+      # --- Web/admin: sync the build already produced by the `web` job, then invalidate ----------
+      - uses: actions/download-artifact@v4
+        with: { name: web-dist, path: web-dist }
+      - uses: actions/download-artifact@v4
+        with: { name: admin-dist, path: admin-dist }
+      - name: Sync web + admin builds to S3
+        run: |
+          set -euo pipefail
+          aws s3 sync web-dist "s3://${{ vars.WEB_BUCKET_NAME }}" --delete
+          aws s3 sync admin-dist "s3://${{ vars.ADMIN_BUCKET_NAME }}" --delete
+      - name: Invalidate CloudFront caches
+        run: |
+          set -euo pipefail
+          aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_WEB_DISTRIBUTION_ID }}" --paths '/*'
+          aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_ADMIN_DISTRIBUTION_ID }}" --paths '/*'
+      - name: Web/admin smoke test (SPA loads + same-origin /api/* actually reaches the API)
+        run: |
+          set -euo pipefail
+          curl -fsS "${{ vars.WEB_URL }}/" -o /dev/null
+          curl -fsS "${{ vars.ADMIN_URL }}/" -o /dev/null
+          # /api/v1/schema/ is public and unauthenticated — a real 200 here (not the SPA's
+          # index.html, which the 403/404 custom_error_response would otherwise mask a routing bug
+          # behind) proves CloudFront's /api/* cache behavior genuinely reaches the ALB, not just
+          # that the bucket has files in it.
+          curl -fsS "${{ vars.WEB_URL }}/api/v1/schema/" | grep -q "^openapi:"
+          curl -fsS "${{ vars.ADMIN_URL }}/api/v1/schema/" | grep -q "^openapi:"
 
   deploy-production:
     needs: [deploy-staging]
     runs-on: ubuntu-24.04
-    environment: production   # configure required reviewers on this environment = manual approval gate
+    environment: production   # required reviewers configured on this environment = the manual approval gate
+    # actions:read is required by actions/download-artifact@v4 below — see deploy-staging's comment.
+    permissions: { contents: read, id-token: write, actions: read }
     steps:
-      - run: echo "Promote ${{ github.sha }} to production — see docs/DEPLOYMENT.md (wired up in Phase 13)"
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Promotes the exact image and dist/ build that just passed staging's smoke tests — no rebuild,
+      # same deterministic migrate-then-deploy sequence as deploy-staging, against production's own
+      # cluster/service/database.
+      - name: Register new task definition revision
+        run: |
+          set -euo pipefail
+          aws ecs describe-task-definition --task-definition "${{ vars.ECS_TASK_FAMILY }}" \
+            --query 'taskDefinition' > current-task-def.json
+          NEW_IMAGE="${{ steps.ecr.outputs.registry }}/vendorconnect/api:${{ github.sha }}"
+          jq --arg IMAGE "$NEW_IMAGE" \
+            '.containerDefinitions[0].image = $IMAGE
+             | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .deregisteredAt)' \
+            current-task-def.json > new-task-def.json
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> "$GITHUB_ENV"
+      - name: Run database migrations (one-off task, new revision)
+        run: |
+          set -euo pipefail
+          TASK_ARN=$(aws ecs run-task --cluster "${{ vars.ECS_CLUSTER }}" \
+            --task-definition "$NEW_TASK_DEF_ARN" --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ vars.PRIVATE_SUBNET_IDS }}],securityGroups=[${{ vars.ECS_SECURITY_GROUP_ID }}],assignPublicIp=DISABLED}" \
+            --overrides '{"containerOverrides":[{"name":"api","command":["python","manage.py","migrate","--noinput"]}]}' \
+            --query 'tasks[0].taskArn' --output text)
+          echo "Waiting for migration task $TASK_ARN to stop..."
+          aws ecs wait tasks-stopped --cluster "${{ vars.ECS_CLUSTER }}" --tasks "$TASK_ARN"
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "${{ vars.ECS_CLUSTER }}" --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+          STOPPED_REASON=$(aws ecs describe-tasks --cluster "${{ vars.ECS_CLUSTER }}" --tasks "$TASK_ARN" \
+            --query 'tasks[0].stoppedReason' --output text)
+          echo "Migration task stopped: exitCode=$EXIT_CODE reason=$STOPPED_REASON"
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "::error::Migration failed (exitCode=$EXIT_CODE, reason=$STOPPED_REASON) — refusing to deploy $NEW_TASK_DEF_ARN"
+            exit 1
+          fi
+      - name: Update service to the new revision and wait for stability
+        run: |
+          set -euo pipefail
+          aws ecs update-service --cluster "${{ vars.ECS_CLUSTER }}" --service "${{ vars.ECS_SERVICE }}" \
+            --task-definition "$NEW_TASK_DEF_ARN" --force-new-deployment > /dev/null
+          aws ecs wait services-stable --cluster "${{ vars.ECS_CLUSTER }}" --services "${{ vars.ECS_SERVICE }}"
+      - name: API smoke test (/health, /health/ready — real HTTP, direct to the ALB)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do curl -fsS "${{ vars.API_URL }}/health" && break; sleep 2; done
+          curl -fsS "${{ vars.API_URL }}/health"
+          curl -fsS "${{ vars.API_URL }}/health/ready"
+
+      - uses: actions/download-artifact@v4
+        with: { name: web-dist, path: web-dist }
+      - uses: actions/download-artifact@v4
+        with: { name: admin-dist, path: admin-dist }
+      - name: Sync web + admin builds to S3
+        run: |
+          set -euo pipefail
+          aws s3 sync web-dist "s3://${{ vars.WEB_BUCKET_NAME }}" --delete
+          aws s3 sync admin-dist "s3://${{ vars.ADMIN_BUCKET_NAME }}" --delete
+      - name: Invalidate CloudFront caches
+        run: |
+          set -euo pipefail
+          aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_WEB_DISTRIBUTION_ID }}" --paths '/*'
+          aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_ADMIN_DISTRIBUTION_ID }}" --paths '/*'
+      - name: Web/admin smoke test (SPA loads + same-origin /api/* actually reaches the API)
+        run: |
+          set -euo pipefail
+          curl -fsS "${{ vars.WEB_URL }}/" -o /dev/null
+          curl -fsS "${{ vars.ADMIN_URL }}/" -o /dev/null
+          curl -fsS "${{ vars.WEB_URL }}/api/v1/schema/" | grep -q "^openapi:"
+          curl -fsS "${{ vars.ADMIN_URL }}/api/v1/schema/" | grep -q "^openapi:"

@@ -1,7 +1,15 @@
 # syntax=docker/dockerfile:1.7
 FROM python:3.11-slim-bookworm AS base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+# tesseract-ocr + libzbar0 are the real OCR/barcode runtimes pytesseract/pyzbar (Phase 10, vc/ai)
+# shell out to / link against — without them the AI detection endpoint would 500 on every request.
+# tesseract-ocr-eng is listed explicitly, not left to transitive resolution: it is a hard Depends of
+# tesseract-ocr on both Debian and Ubuntu (verified directly via `apt-cache depends tesseract-ocr`),
+# so --no-install-recommends would not have dropped it either way — but a Python-package-only check
+# can't see that, and a tesseract binary with no language data installed silently produces empty OCR
+# output rather than an error, which is exactly the kind of quiet failure this project doesn't ship.
 RUN apt-get update && apt-get install -y --no-install-recommends gdal-bin libgdal32 libgeos-c1v5 libproj25 curl \
+    tesseract-ocr tesseract-ocr-eng libzbar0 \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY requirements.txt .

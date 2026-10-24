@@ -1,0 +1,29 @@
+/* App-shell level styles — role selection is the one screen that belongs to neither the
+ * customer half nor the vendor half of the app (see customer/customer.css, vendor/vendor.css). */
+.vc-rolecard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vc-s3);
+  width: 100%;
+  padding: var(--vc-s4);
+  text-align: left;
+  cursor: pointer;
+  border: 2px solid var(--vc-line);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface);
+  box-shadow: var(--vc-shadow);
+}
+.vc-rolecard:active { transform: scale(0.99); }
+.vc-rolecard__head { display: flex; align-items: center; gap: var(--vc-s3); }
+.vc-rolecard__icon {
+  display: grid; place-items: center; width: 52px; height: 52px; flex: none;
+  border-radius: 16px; background: var(--vc-green-100); color: var(--vc-green-700);
+}
+.vc-rolecard--vendor .vc-rolecard__icon { background: var(--vc-orange-100); color: var(--vc-orange-700); }
+.vc-rolecard__headtext { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
+.vc-rolecard__title { font-size: var(--vc-text-lg); font-weight: 750; }
+.vc-rolecard__tagline { color: var(--vc-ink-3); font-size: var(--vc-text-sm); }
+.vc-rolecard__chevron { flex: none; color: var(--vc-ink-3); }
+.vc-rolecard__bullets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px var(--vc-s3); }
+.vc-rolecard__bullet { display: flex; align-items: flex-start; gap: 6px; font-size: var(--vc-text-sm); font-weight: 600; color: var(--vc-ink-2); }
+.vc-rolecard__bullet svg { flex: none; margin-top: 3px; color: var(--vc-green-600); }
