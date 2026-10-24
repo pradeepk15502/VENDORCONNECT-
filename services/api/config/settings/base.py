@@ -245,6 +245,8 @@ OTP_MAX_PER_PHONE_PER_HOUR = env.int("OTP_MAX_PER_PHONE_PER_HOUR", default=5)
 OTP_HMAC_KEY = env("OTP_HMAC_KEY", default=SECRET_KEY)
 OTP_DEV_ECHO = env.bool("OTP_DEV_ECHO", default=False)  # never true outside dev/test
 SMS_PROVIDER = env("SMS_PROVIDER", default="console")
+MSG91_AUTH_KEY = env("MSG91_AUTH_KEY", default="")
+MSG91_OTP_TEMPLATE_ID = env("MSG91_OTP_TEMPLATE_ID", default="")
 DEFAULT_COUNTRY_CODE = "+91"
 
 # --- CORS / CSRF --------------------------------------------------------

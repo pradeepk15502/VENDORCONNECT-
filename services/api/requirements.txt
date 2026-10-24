@@ -20,3 +20,5 @@ pyzbar==0.1.*
 # Phase 13 — S3 media backend (vc/assets/storage.py). Auth is via boto3's default credential chain
 # (the ECS task role in AWS), never a static key pair read from Django settings.
 boto3==1.*
+# Phase 14 — MSG91 SMS adapter (vc/accounts/sms.py), a plain JSON HTTP POST.
+requests==2.*
